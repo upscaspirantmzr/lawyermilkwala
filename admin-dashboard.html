@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Milqly</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
+      authDomain: "milqly.firebaseapp.com",
+      projectId: "milqly",
+      storageBucket: "milqly.firebasestorage.app",
+      messagingSenderId: "509357207390",
+      appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
+      measurementId: "G-Z576VSVC5J"
+    };
+
+    // Init Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Auth check
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        window.location.href = "admin-login.html";
+      }
+    });
+
+    // Logout
+    async function logout() {
+      await signOut(auth);
+      localStorage.removeItem("adminId");
+      window.location.href = "admin-login.html";
+    }
+    window.logout = logout;
+
+    // Load Farmers
+    async function loadFarmers() {
+      const farmerList = document.getElementById("farmerList");
+      farmerList.innerHTML = "";
+      const snapshot = await getDocs(collection(db, "farmers"));
+      snapshot.forEach(docSnap => {
+        const farmer = docSnap.data();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td class="p-2 border">${farmer.name}</td>
+          <td class="p-2 border">${farmer.email}</td>
+          <td class="p-2 border">${farmer.status || "Pending"}</td>
+          <td class="p-2 border">
+            <button class="bg-green-500 text-white px-2 py-1 rounded" onclick="approveFarmer('${docSnap.id}')">Approve</button>
+            <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="rejectFarmer('${docSnap.id}')">Reject</button>
+          </td>`;
+        farmerList.appendChild(row);
+      });
+    }
+
+    async function approveFarmer(id) {
+      await updateDoc(doc(db, "farmers", id), { status: "Approved" });
+      loadFarmers();
+    }
+
+    async function rejectFarmer(id) {
+      await deleteDoc(doc(db, "farmers", id));
+      loadFarmers();
+    }
+
+    window.approveFarmer = approveFarmer;
+    window.rejectFarmer = rejectFarmer;
+
+    // Load Users
+    async function loadUsers() {
+      const userList = document.getElementById("userList");
+      userList.innerHTML = "";
+      const snapshot = await getDocs(collection(db, "users"));
+      snapshot.forEach(docSnap => {
+        const user = docSnap.data();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td class="p-2 border">${user.name}</td>
+          <td class="p-2 border">${user.email}</td>
+          <td class="p-2 border">${user.role || "customer"}</td>`;
+        userList.appendChild(row);
+      });
+    }
+
+    // Load Subscriptions
+    async function loadSubscriptions() {
+      const subsList = document.getElementById("subsList");
+      subsList.innerHTML = "";
+      const snapshot = await getDocs(collection(db, "subscriptions"));
+      snapshot.forEach(docSnap => {
+        const sub = docSnap.data();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td class="p-2 border">${sub.userName}</td>
+          <td class="p-2 border">${sub.plan}</td>
+          <td class="p-2 border">${sub.assignedFarmer || "Not Assigned"}</td>
+          <td class="p-2 border">
+            <select onchange="assignFarmer('${docSnap.id}', this.value)" class="p-1 border rounded">
+              <option value="">Assign Farmer</option>
+              <option value="Farmer A">Farmer A</option>
+              <option value="Farmer B">Farmer B</option>
+              <option value="Farmer C">Farmer C</option>
+            </select>
+          </td>`;
+        subsList.appendChild(row);
+      });
+    }
+
+    async function assignFarmer(subId, farmerName) {
+      if (!farmerName) return;
+      await updateDoc(doc(db, "subscriptions", subId), { assignedFarmer: farmerName });
+      loadSubscriptions();
+    }
+    window.assignFarmer = assignFarmer;
+
+    // Load Deliveries
+    async function loadDeliveries() {
+      const delList = document.getElementById("deliveryList");
+      delList.innerHTML = "";
+      const snapshot = await getDocs(collection(db, "deliveries"));
+      snapshot.forEach(docSnap => {
+        const delivery = docSnap.data();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td class="p-2 border">${delivery.userName}</td>
+          <td class="p-2 border">${delivery.product}</td>
+          <td class="p-2 border">${delivery.status}</td>
+          <td class="p-2 border">
+            <select onchange="updateDelivery('${docSnap.id}', this.value)" class="p-1 border rounded">
+              <option ${delivery.status === "Approved" ? "selected" : ""}>Approved</option>
+              <option ${delivery.status === "Processed" ? "selected" : ""}>Processed</option>
+              <option ${delivery.status === "Delivered" ? "selected" : ""}>Delivered</option>
+            </select>
+          </td>`;
+        delList.appendChild(row);
+      });
+    }
+
+    async function updateDelivery(id, status) {
+      await updateDoc(doc(db, "deliveries", id), { status });
+      loadDeliveries();
+    }
+    window.updateDelivery = updateDelivery;
+
+    // Initial Load
+    window.onload = () => {
+      loadFarmers();
+      loadUsers();
+      loadSubscriptions();
+      loadDeliveries();
+    };
+  </script>
+</head>
+<body class="bg-gray-100">
+  <div class="flex justify-between items-center p-4 bg-blue-600 text-white shadow">
+    <h1 class="text-xl font-bold">Milqly Admin Dashboard</h1>
+    <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded">Logout</button>
+  </div>
+
+  <div class="p-6 space-y-8">
+    <!-- Farmers -->
+    <div class="bg-white p-4 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Manage Farmers</h2>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2 border">Name</th>
+            <th class="p-2 border">Email</th>
+            <th class="p-2 border">Status</th>
+            <th class="p-2 border">Action</th>
+          </tr>
+        </thead>
+        <tbody id="farmerList"></tbody>
+      </table>
+    </div>
+
+    <!-- Users -->
+    <div class="bg-white p-4 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Registered Users</h2>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2 border">Name</th>
+            <th class="p-2 border">Email</th>
+            <th class="p-2 border">Role</th>
+          </tr>
+        </thead>
+        <tbody id="userList"></tbody>
+      </table>
+    </div>
+
+    <!-- Subscriptions -->
+    <div class="bg-white p-4 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Subscriptions</h2>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2 border">User</th>
+            <th class="p-2 border">Plan</th>
+            <th class="p-2 border">Assigned Farmer</th>
+            <th class="p-2 border">Action</th>
+          </tr>
+        </thead>
+        <tbody id="subsList"></tbody>
+      </table>
+    </div>
+
+    <!-- Deliveries -->
+    <div class="bg-white p-4 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Deliveries</h2>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2 border">User</th>
+            <th class="p-2 border">Product</th>
+            <th class="p-2 border">Status</th>
+            <th class="p-2 border">Update</th>
+          </tr>
+        </thead>
+        <tbody id="deliveryList"></tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
