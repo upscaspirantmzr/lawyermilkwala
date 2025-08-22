@@ -3,86 +3,157 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User Dashboard</title>
+  <title>User Dashboard – Milk Delivery</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js"></script>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gradient-to-r from-blue-50 to-blue-100 min-h-screen flex flex-col">
+
   <!-- Navbar -->
-  <header class="bg-blue-600 text-white shadow-md">
-    <div class="max-w-7xl mx-auto flex justify-between items-center p-4">
-      <h1 class="text-xl font-bold flex items-center gap-2">
-        🥛 Milk Delivery – <span class="font-semibold">User Portal</span>
+  <nav class="bg-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-blue-600 flex items-center gap-2">
+        🥛 Milk Delivery
       </h1>
-      <nav class="space-x-4">
-        <a href="#" class="hover:underline">Auth</a>
-        <a href="#" class="hover:underline">Logout</a>
-      </nav>
-    </div>
-  </header>
-
-  <!-- Dashboard Container -->
-  <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-
-    <!-- Profile Card -->
-    <div class="bg-white shadow-md rounded-2xl p-6">
-      <h2 class="text-lg font-semibold text-blue-600 mb-4">👤 Profile</h2>
-      <p><span class="font-medium">Name:</span> asdfrgt</p>
-      <p><span class="font-medium">Email:</span> customer@mzr.in</p>
-      <p><span class="font-medium">Phone:</span> 34567890987654</p>
-      <p><span class="font-medium">Address:</span> zczvc</p>
-      <p><span class="font-medium">Role:</span> User</p>
-    </div>
-
-    <!-- Create Subscription -->
-    <div class="bg-white shadow-md rounded-2xl p-6">
-      <h2 class="text-lg font-semibold text-green-600 mb-4">📝 Create Subscription</h2>
-      <form class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium">Plan</label>
-          <select class="w-full border rounded-lg p-2">
-            <option>Weekly</option>
-            <option>Monthly</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium">Quantity (L/day)</label>
-          <input type="number" class="w-full border rounded-lg p-2" value="1">
-        </div>
-        <div>
-          <label class="block text-sm font-medium">Start Date</label>
-          <input type="date" class="w-full border rounded-lg p-2">
-        </div>
-        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg shadow">
-          ➕ Create
+      <div class="space-x-4">
+        <a href="index.html" class="hover:text-blue-600">Home</a>
+        <a href="user-dashboard.html" class="text-blue-600 font-semibold">Dashboard</a>
+        <button onclick="logoutUser()" class="bg-red-500 text-white px-4 py-2 rounded-xl hover:bg-red-600">
+          Logout
         </button>
-      </form>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Dashboard Content -->
+  <section class="flex-1 px-4 py-8 max-w-6xl mx-auto space-y-8">
+
+    <!-- Welcome -->
+    <div class="text-center">
+      <h2 class="text-3xl font-bold text-blue-700">Welcome, <span id="username">Loading...</span> 👋</h2>
+      <p class="text-gray-600 mt-2">Here’s your subscription and delivery updates.</p>
     </div>
 
-    <!-- Subscription Policy -->
-    <div class="bg-blue-50 border-l-4 border-blue-500 rounded-2xl p-6">
-      <h2 class="text-lg font-semibold text-blue-700 mb-2">📜 Subscription Policy</h2>
-      <ul class="list-disc list-inside text-sm text-gray-700">
-        <li>Only <strong>one active subscription</strong> at a time.</li>
-        <li>Admin assigns to an available farmer.</li>
-        <li>Farmer updates status: 
-          <span class="text-yellow-600 font-medium">Approved</span> → 
-          <span class="text-blue-600 font-medium">Processed</span> → 
-          <span class="text-green-600 font-medium">Delivered</span>.
-        </li>
-      </ul>
-    </div>
+    <!-- Grid Layout -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-    <!-- Current Subscription -->
-    <div class="bg-white shadow-md rounded-2xl p-6">
-      <h2 class="text-lg font-semibold text-purple-600 mb-2">📦 Current Subscription</h2>
-      <p class="text-gray-500">No active subscription found.</p>
-    </div>
+      <!-- Active Subscription -->
+      <div class="bg-white shadow-lg rounded-2xl p-6">
+        <h3 class="text-xl font-semibold text-blue-600">📦 Active Subscription</h3>
+        <p class="text-gray-600 mt-2">Your current milk plan details:</p>
+        <ul class="mt-4 space-y-2 text-gray-700">
+          <li><b>Plan:</b> <span id="plan">Loading...</span></li>
+          <li><b>Start Date:</b> <span id="startDate">Loading...</span></li>
+          <li><b>End Date:</b> <span id="endDate">Loading...</span></li>
+          <li><b>Status:</b> <span id="subStatus" class="text-blue-600 font-semibold">Loading...</span></li>
+        </ul>
+        <button class="mt-4 w-full bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700">Manage Subscription</button>
+      </div>
 
-    <!-- Subscription History -->
-    <div class="bg-white shadow-md rounded-2xl p-6 md:col-span-2">
-      <h2 class="text-lg font-semibold text-orange-600 mb-2">📊 Subscription History</h2>
-      <p class="text-gray-500">No past subscriptions yet.</p>
+      <!-- Delivery Status -->
+      <div class="bg-white shadow-lg rounded-2xl p-6">
+        <h3 class="text-xl font-semibold text-green-600">🚚 Delivery Status</h3>
+        <p class="text-gray-600 mt-2">Track today’s delivery:</p>
+        <div class="mt-4">
+          <div class="flex items-center gap-2">
+            <div id="deliveryDot" class="w-4 h-4 rounded-full bg-gray-400"></div>
+            <span id="deliveryStatus">Loading...</span>
+          </div>
+        </div>
+        <button class="mt-4 w-full bg-green-600 text-white py-2 rounded-xl hover:bg-green-700">View History</button>
+      </div>
+
+      <!-- Profile Info -->
+      <div class="bg-white shadow-lg rounded-2xl p-6">
+        <h3 class="text-xl font-semibold text-purple-600">👤 Profile Info</h3>
+        <p class="text-gray-600 mt-2">Your registered details:</p>
+        <ul class="mt-4 space-y-2 text-gray-700">
+          <li><b>Name:</b> <span id="profileName">Loading...</span></li>
+          <li><b>Email:</b> <span id="profileEmail">Loading...</span></li>
+          <li><b>Address:</b> <span id="profileAddress">Loading...</span></li>
+        </ul>
+        <button class="mt-4 w-full bg-purple-600 text-white py-2 rounded-xl hover:bg-purple-700">Edit Profile</button>
+      </div>
     </div>
-  </main>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-300 py-6 text-center">
+    <p>© 2025 Milk Delivery. All rights reserved.</p>
+  </footer>
+
+  <!-- Script -->
+  <script type="module">
+    // Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
+      authDomain: "milqly.firebaseapp.com",
+      projectId: "milqly",
+      storageBucket: "milqly.firebasestorage.app",
+      messagingSenderId: "509357207390",
+      appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
+      measurementId: "G-Z576VSVC5J"
+    };
+
+    // Init Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Check Auth
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        window.location.href = "login.html"; // redirect if not logged in
+        return;
+      }
+
+      document.getElementById("username").textContent = user.displayName || "User";
+      document.getElementById("profileEmail").textContent = user.email;
+
+      // Fetch User Profile
+      const profileDoc = await db.collection("users").doc(user.uid).get();
+      if (profileDoc.exists) {
+        const profile = profileDoc.data();
+        document.getElementById("profileName").textContent = profile.name || "Not set";
+        document.getElementById("profileAddress").textContent = profile.address || "Not set";
+      }
+
+      // Fetch Subscription
+      const subDoc = await db.collection("subscriptions").doc(user.uid).get();
+      if (subDoc.exists) {
+        const sub = subDoc.data();
+        document.getElementById("plan").textContent = sub.plan || "No Plan";
+        document.getElementById("startDate").textContent = sub.startDate || "-";
+        document.getElementById("endDate").textContent = sub.endDate || "-";
+        document.getElementById("subStatus").textContent = sub.status || "Inactive";
+        document.getElementById("subStatus").className = sub.status === "Active" 
+          ? "text-green-600 font-semibold" 
+          : "text-red-600 font-semibold";
+      }
+
+      // Fetch Delivery
+      const deliveryDoc = await db.collection("deliveries").doc(user.uid).get();
+      if (deliveryDoc.exists) {
+        const delivery = deliveryDoc.data();
+        document.getElementById("deliveryStatus").textContent = delivery.today || "Pending";
+        document.getElementById("deliveryDot").className =
+          delivery.today === "Delivered" 
+            ? "w-4 h-4 rounded-full bg-green-500" 
+            : "w-4 h-4 rounded-full bg-yellow-500";
+      }
+    });
+
+    // Logout
+    function logoutUser() {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    }
+    window.logoutUser = logoutUser;
+  </script>
 </body>
 </html>
