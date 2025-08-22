@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Milk Delivery – Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-r from-blue-50 to-blue-100 min-h-screen flex flex-col">
+
+  <!-- Navbar -->
+  <nav class="bg-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-blue-600 flex items-center gap-2">
+        🥛 Milk Delivery
+      </h1>
+      <div class="space-x-4">
+        <a href="index.html" class="text-gray-700 hover:text-blue-600">Home</a>
+        <a href="registration.html" class="hover:text-blue-600">Register</a>
+        <a href="login.html" class="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700">Login</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Login Form -->
+  <section class="flex-1 flex items-center justify-center py-10 px-4">
+    <div class="bg-white shadow-lg rounded-2xl p-8 max-w-md w-full">
+      <h2 class="text-3xl font-bold text-center text-blue-600">Welcome Back</h2>
+      <p class="text-gray-600 text-center mt-2">Login to manage your subscription</p>
+
+      <form action="#" method="POST" class="mt-6 space-y-4">
+        <!-- Email -->
+        <div>
+          <label class="block text-gray-700 font-medium">Email</label>
+          <input type="email" name="email" placeholder="Enter your email" required
+            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" />
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label class="block text-gray-700 font-medium">Password</label>
+          <input type="password" name="password" placeholder="Enter your password" required
+            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" />
+        </div>
+
+        <!-- Remember Me + Forgot Password -->
+        <div class="flex items-center justify-between text-sm">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" class="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500">
+            <span class="text-gray-600">Remember me</span>
+          </label>
+          <a href="#" class="text-blue-600 hover:underline">Forgot password?</a>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit"
+          class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl shadow hover:bg-blue-700 transition">
+          Login
+        </button>
+      </form>
+
+      <p class="text-center text-gray-600 mt-4">
+        Don’t have an account? 
+        <a href="registration.html" class="text-blue-600 font-medium hover:underline">Register here</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-300 py-6 text-center">
+    <p>© 2025 Milk Delivery. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>
