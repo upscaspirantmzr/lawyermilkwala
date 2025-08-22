@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Login - Milk Delivery</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="logo">🥛 Milk Delivery</div>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="farmer-register.html">Register</a></li>
+      <li><a href="farmer-login.html" class="active">Login</a></li>
+    </ul>
+  </nav>
+
+  <!-- Login Form -->
+  <div class="form-container">
+    <h2>Farmer Login</h2>
+    <form id="farmerLoginForm">
+      <input type="email" id="farmerEmail" placeholder="Enter your email" required>
+      <input type="password" id="farmerPassword" placeholder="Enter your password" required>
+      <button type="submit">Login</button>
+    </form>
+    <p id="loginMessage"></p>
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+    import { firebaseConfig } from "./firebaseConfig.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    document.getElementById("farmerLoginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("farmerEmail").value;
+      const password = document.getElementById("farmerPassword").value;
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // check approval status in Firestore
+        const farmerRef = doc(db, "farmers", user.uid);
+        const farmerSnap = await getDoc(farmerRef);
+
+        if (farmerSnap.exists()) {
+          const data = farmerSnap.data();
+          if (data.status === "approved") {
+            window.location.href = "farmer-dashboard.html";
+          } else {
+            document.getElementById("loginMessage").innerText = "Your account is pending admin approval.";
+            await signOut(auth);
+          }
+        } else {
+          document.getElementById("loginMessage").innerText = "No farmer record found!";
+        }
+
+      } catch (error) {
+        document.getElementById("loginMessage").innerText = "Login failed: " + error.message;
+      }
+    });
+  </script>
+</body>
+</html>
