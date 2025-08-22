@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <!-- Navbar -->
+  <header class="bg-blue-600 text-white shadow-md">
+    <div class="max-w-7xl mx-auto flex justify-between items-center p-4">
+      <h1 class="text-xl font-bold flex items-center gap-2">
+        🥛 Milk Delivery – <span class="font-semibold">User Portal</span>
+      </h1>
+      <nav class="space-x-4">
+        <a href="#" class="hover:underline">Auth</a>
+        <a href="#" class="hover:underline">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Dashboard Container -->
+  <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- Profile Card -->
+    <div class="bg-white shadow-md rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-blue-600 mb-4">👤 Profile</h2>
+      <p><span class="font-medium">Name:</span> asdfrgt</p>
+      <p><span class="font-medium">Email:</span> customer@mzr.in</p>
+      <p><span class="font-medium">Phone:</span> 34567890987654</p>
+      <p><span class="font-medium">Address:</span> zczvc</p>
+      <p><span class="font-medium">Role:</span> User</p>
+    </div>
+
+    <!-- Create Subscription -->
+    <div class="bg-white shadow-md rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-green-600 mb-4">📝 Create Subscription</h2>
+      <form class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium">Plan</label>
+          <select class="w-full border rounded-lg p-2">
+            <option>Weekly</option>
+            <option>Monthly</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Quantity (L/day)</label>
+          <input type="number" class="w-full border rounded-lg p-2" value="1">
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Start Date</label>
+          <input type="date" class="w-full border rounded-lg p-2">
+        </div>
+        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg shadow">
+          ➕ Create
+        </button>
+      </form>
+    </div>
+
+    <!-- Subscription Policy -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-blue-700 mb-2">📜 Subscription Policy</h2>
+      <ul class="list-disc list-inside text-sm text-gray-700">
+        <li>Only <strong>one active subscription</strong> at a time.</li>
+        <li>Admin assigns to an available farmer.</li>
+        <li>Farmer updates status: 
+          <span class="text-yellow-600 font-medium">Approved</span> → 
+          <span class="text-blue-600 font-medium">Processed</span> → 
+          <span class="text-green-600 font-medium">Delivered</span>.
+        </li>
+      </ul>
+    </div>
+
+    <!-- Current Subscription -->
+    <div class="bg-white shadow-md rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-purple-600 mb-2">📦 Current Subscription</h2>
+      <p class="text-gray-500">No active subscription found.</p>
+    </div>
+
+    <!-- Subscription History -->
+    <div class="bg-white shadow-md rounded-2xl p-6 md:col-span-2">
+      <h2 class="text-lg font-semibold text-orange-600 mb-2">📊 Subscription History</h2>
+      <p class="text-gray-500">No past subscriptions yet.</p>
+    </div>
+  </main>
+</body>
+</html>
