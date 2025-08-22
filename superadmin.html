@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard | Milqly</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js"></script>
+</head>
+<body class="bg-gray-100 flex">
+
+  <!-- Sidebar -->
+  <div class="w-64 bg-white shadow-lg h-screen fixed">
+    <div class="p-6 border-b">
+      <h1 class="text-2xl font-bold text-indigo-600">Milqly Admin</h1>
+    </div>
+    <nav class="p-4 space-y-4">
+      <button onclick="showSection('dashboard')" class="w-full text-left text-gray-700 hover:text-indigo-600">📊 Dashboard</button>
+      <button onclick="showSection('farmers')" class="w-full text-left text-gray-700 hover:text-indigo-600">👨‍🌾 Farmers</button>
+      <button onclick="showSection('subscriptions')" class="w-full text-left text-gray-700 hover:text-indigo-600">🥛 Subscriptions</button>
+      <button onclick="showSection('orders')" class="w-full text-left text-gray-700 hover:text-indigo-600">📦 Orders</button>
+      <button onclick="logout()" class="w-full text-left text-red-600 mt-6">🚪 Logout</button>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="ml-64 flex-1 p-6">
+
+    <!-- Dashboard Stats -->
+    <section id="dashboard" class="space-y-6">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">Overview</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-lg shadow text-center">
+          <h3 class="text-gray-500">Total Users</h3>
+          <p id="statUsers" class="text-2xl font-bold text-indigo-600">0</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow text-center">
+          <h3 class="text-gray-500">Pending Farmers</h3>
+          <p id="statFarmers" class="text-2xl font-bold text-indigo-600">0</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow text-center">
+          <h3 class="text-gray-500">Active Subscriptions</h3>
+          <p id="statSubs" class="text-2xl font-bold text-indigo-600">0</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow text-center">
+          <h3 class="text-gray-500">Orders in Progress</h3>
+          <p id="statOrders" class="text-2xl font-bold text-indigo-600">0</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Farmers Section -->
+    <section id="farmers" class="hidden">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">Farmer Approval</h2>
+      <div id="farmersList" class="space-y-4"></div>
+    </section>
+
+    <!-- Subscriptions Section -->
+    <section id="subscriptions" class="hidden">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">Manage Subscriptions</h2>
+      <div id="subsList" class="space-y-4"></div>
+    </section>
+
+    <!-- Orders Section -->
+    <section id="orders" class="hidden">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">Track Orders</h2>
+      <div id="ordersList" class="space-y-4"></div>
+    </section>
+  </div>
+
+  <script>
+    // 🔥 Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
+      authDomain: "milqly.firebaseapp.com",
+      projectId: "milqly",
+      storageBucket: "milqly.firebasestorage.app",
+      messagingSenderId: "509357207390",
+      appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
+      measurementId: "G-Z576VSVC5J"
+    };
+
+    // Init Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Sidebar Navigation
+    function showSection(id) {
+      document.querySelectorAll("section").forEach(sec => sec.classList.add("hidden"));
+      document.getElementById(id).classList.remove("hidden");
+    }
+
+    // Logout
+    function logout() {
+      auth.signOut().then(() => window.location.href = "admin-login.html");
+    }
+
+    // Load Stats + Data
+    async function loadDashboard() {
+      // Users Count
+      const usersSnap = await db.collection("users").get();
+      document.getElementById("statUsers").innerText = usersSnap.size;
+
+      // Farmers Pending
+      const farmersSnap = await db.collection("farmers").where("approved", "==", false).get();
+      document.getElementById("statFarmers").innerText = farmersSnap.size;
+
+      // Subscriptions
+      const subsSnap = await db.collection("subscriptions").get();
+      document.getElementById("statSubs").innerText = subsSnap.size;
+
+      // Orders In Progress
+      const ordersSnap = await db.collection("subscriptions").where("status", "!=", "Delivered").get();
+      document.getElementById("statOrders").innerText = ordersSnap.size;
+
+      // Pending Farmers List
+      let farmersHTML = "";
+      farmersSnap.forEach(doc => {
+        const f = doc.data();
+        farmersHTML += `
+          <div class="bg-white p-4 rounded shadow flex justify-between items-center">
+            <div>
+              <p class="font-bold">${f.name}</p>
+              <p class="text-sm text-gray-500">${f.email}</p>
+            </div>
+            <div class="space-x-2">
+              <button onclick="approveFarmer('${doc.id}')" class="bg-green-500 text-white px-3 py-1 rounded">Approve</button>
+              <button onclick="rejectFarmer('${doc.id}')" class="bg-red-500 text-white px-3 py-1 rounded">Reject</button>
+            </div>
+          </div>`;
+      });
+      document.getElementById("farmersList").innerHTML = farmersHTML;
+
+      // Subscriptions List
+      let subsHTML = "";
+      subsSnap.forEach(doc => {
+        const s = doc.data();
+        subsHTML += `
+          <div class="bg-white p-4 rounded shadow">
+            <p><b>User:</b> ${s.userName || "N/A"}</p>
+            <p><b>Plan:</b> ${s.plan}</p>
+            <p><b>Status:</b> ${s.status}</p>
+            <label class="block mt-2 text-sm">Assign Farmer:</label>
+            <input type="text" id="farmer-${doc.id}" placeholder="Enter Farmer ID" class="border p-2 rounded w-full" />
+            <button onclick="assignFarmer('${doc.id}')" class="mt-2 bg-indigo-600 text-white px-3 py-1 rounded">Assign</button>
+          </div>`;
+      });
+      document.getElementById("subsList").innerHTML = subsHTML;
+
+      // Orders List
+      let ordersHTML = "";
+      subsSnap.forEach(doc => {
+        const o = doc.data();
+        ordersHTML += `
+          <div class="bg-white p-4 rounded shadow">
+            <p><b>User:</b> ${o.userName || "N/A"}</p>
+            <p><b>Plan:</b> ${o.plan}</p>
+            <p><b>Status:</b> <span class="text-indigo-600">${o.status}</span></p>
+            <p><b>Farmer:</b> ${o.assignedFarmerId || "Not Assigned"}</p>
+          </div>`;
+      });
+      document.getElementById("ordersList").innerHTML = ordersHTML;
+    }
+
+    // Approve/Reject Farmers
+    function approveFarmer(id) {
+      db.collection("farmers").doc(id).update({ approved: true });
+      loadDashboard();
+    }
+    function rejectFarmer(id) {
+      db.collection("farmers").doc(id).delete();
+      loadDashboard();
+    }
+
+    // Assign Farmer
+    function assignFarmer(subId) {
+      const farmerId = document.getElementById(`farmer-${subId}`).value;
+      if (farmerId) {
+        db.collection("subscriptions").doc(subId).update({
+          assignedFarmerId: farmerId,
+          status: "Assigned"
+        });
+        loadDashboard();
+      }
+    }
+
+    // Auth Check
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = "admin-login.html";
+      } else {
+        loadDashboard();
+      }
+    });
+  </script>
+</body>
+</html>
