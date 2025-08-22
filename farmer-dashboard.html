@@ -1,101 +1,286 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Farmer Dashboard - Milk Delivery</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Farmer Dashboard • Milqly</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <!-- Navbar -->
-  <nav class="navbar">
-    <div class="logo">🥛 Milk Delivery</div>
-    <ul>
-      <li><a href="farmer-dashboard.html" class="active">Dashboard</a></li>
-      <li><a href="#" id="logoutBtn">Logout</a></li>
-    </ul>
-  </nav>
+<body class="min-h-screen bg-gradient-to-b from-green-50 to-blue-50">
 
-  <!-- Dashboard -->
-  <div class="dashboard-container">
-    <h2>Welcome Farmer</h2>
-    <div id="farmerInfo"></div>
+  <!-- Top nav -->
+  <header class="bg-white shadow sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center text-green-600 font-bold">🥛</div>
+        <div>
+          <h1 class="font-bold text-lg text-green-700">Milqly • Farmer Dashboard</h1>
+          <p class="text-sm text-gray-500">Manage your assigned subscriptions & update delivery status</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div id="earningsCard" class="text-right">
+          <div class="text-xs text-gray-500">Earnings (delivered)</div>
+          <div id="earnings" class="font-semibold text-green-600 text-lg">₹0</div>
+        </div>
+        <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg">Logout</button>
+      </div>
+    </div>
+  </header>
 
-    <h3>Assigned Subscriptions</h3>
-    <div id="subscriptions"></div>
-  </div>
+  <!-- Content -->
+  <main class="max-w-6xl mx-auto p-4 space-y-6">
+    <!-- Profile Card -->
+    <section class="bg-white rounded-2xl shadow p-5 flex flex-col md:flex-row md:justify-between md:items-center">
+      <div>
+        <h2 id="farmerName" class="text-xl font-semibold text-gray-800">Loading...</h2>
+        <p id="farmerEmail" class="text-sm text-gray-500">—</p>
+        <p id="farmerLocation" class="text-sm text-gray-500 mt-1">—</p>
+      </div>
+      <div class="mt-4 md:mt-0">
+        <span class="inline-block bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium" id="approvalBadge">Status: —</span>
+      </div>
+    </section>
+
+    <!-- Assigned subscriptions -->
+    <section>
+      <h3 class="text-lg font-semibold text-gray-800 mb-3">Assigned Subscriptions</h3>
+      <div id="assignedList" class="space-y-4">
+        <!-- cards inserted here -->
+      </div>
+
+      <div id="noAssigned" class="text-gray-500 mt-4">Loading assigned subscriptions…</div>
+    </section>
+
+    <!-- Instructions -->
+    <section class="bg-white p-4 rounded-lg shadow text-sm text-gray-600">
+      <strong>Process notes:</strong>
+      <ul class="list-disc ml-5 mt-2">
+        <li>After Admin assigns a subscription it appears here as <em>Assigned</em>.</li>
+        <li>Click <strong>Approve</strong> to accept the assignment (moves to <em>Approved</em>).</li>
+        <li>Then mark <strong>Processed</strong> and finally <strong>Delivered</strong>. Users & Admin see updates live.</li>
+      </ul>
+    </section>
+  </main>
 
   <!-- Firebase -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, onSnapshot, doc, updateDoc, getDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    import { firebaseConfig } from "./firebaseConfig.js";
-
+    // ===== your firebase config =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
+      authDomain: "milqly.firebaseapp.com",
+      projectId: "milqly",
+      storageBucket: "milqly.firebasestorage.app",
+      messagingSenderId: "509357207390",
+      appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
+      measurementId: "G-Z576VSVC5J"
+    };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const farmerInfo = document.getElementById("farmerInfo");
-    const subscriptionsDiv = document.getElementById("subscriptions");
+    // UI refs
+    const farmerNameEl = document.getElementById("farmerName");
+    const farmerEmailEl = document.getElementById("farmerEmail");
+    const farmerLocationEl = document.getElementById("farmerLocation");
+    const approvalBadge = document.getElementById("approvalBadge");
+    const assignedList = document.getElementById("assignedList");
+    const noAssigned = document.getElementById("noAssigned");
+    const earningsEl = document.getElementById("earnings");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const farmerRef = doc(db, "farmers", user.uid);
-        const farmerSnap = await getDoc(farmerRef);
-
-        if (farmerSnap.exists()) {
-          const farmerData = farmerSnap.data();
-          farmerInfo.innerHTML = `
-            <p><strong>Name:</strong> ${farmerData.fullName}</p>
-            <p><strong>Email:</strong> ${farmerData.email}</p>
-            <p><strong>Status:</strong> ${farmerData.status}</p>
-          `;
-
-          if (farmerData.subscriptions && farmerData.subscriptions.length > 0) {
-            subscriptionsDiv.innerHTML = "";
-            farmerData.subscriptions.forEach((sub, index) => {
-              subscriptionsDiv.innerHTML += `
-                <div class="card">
-                  <p><strong>Customer:</strong> ${sub.customerName}</p>
-                  <p><strong>Plan:</strong> ${sub.plan}</p>
-                  <p><strong>Status:</strong> ${sub.deliveryStatus}</p>
-                  <select onchange="updateStatus('${user.uid}', ${index}, this.value)">
-                    <option value="Approved" ${sub.deliveryStatus === 'Approved' ? 'selected' : ''}>Approved</option>
-                    <option value="Processed" ${sub.deliveryStatus === 'Processed' ? 'selected' : ''}>Processed</option>
-                    <option value="Delivered" ${sub.deliveryStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
-                  </select>
-                </div>
-              `;
-            });
-          } else {
-            subscriptionsDiv.innerHTML = "<p>No subscriptions assigned yet.</p>";
-          }
-        } else {
-          farmerInfo.innerHTML = "<p>Farmer record not found!</p>";
-        }
-      } else {
-        window.location.href = "farmer-login.html";
-      }
-    });
-
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
+    logoutBtn.onclick = async () => {
       await signOut(auth);
       window.location.href = "farmer-login.html";
-    });
-
-    // update subscription status
-    window.updateStatus = async (farmerId, index, newStatus) => {
-      const farmerRef = doc(db, "farmers", farmerId);
-      const farmerSnap = await getDoc(farmerRef);
-      if (farmerSnap.exists()) {
-        let farmerData = farmerSnap.data();
-        farmerData.subscriptions[index].deliveryStatus = newStatus;
-        await updateDoc(farmerRef, { subscriptions: farmerData.subscriptions });
-        alert("Status updated to " + newStatus);
-      }
     };
+
+    // Keep reference to snapshot unsub
+    let subsUnsub = null;
+
+    // Utility: status badge style
+    function statusBadge(status){
+      const base = "inline-block px-3 py-1 rounded-full text-xs font-semibold";
+      switch((status||"").toLowerCase()){
+        case "assigned": return `${base} bg-blue-100 text-blue-700`;
+        case "approved": return `${base} bg-yellow-100 text-yellow-800`;
+        case "processed": return `${base} bg-indigo-100 text-indigo-800`;
+        case "delivered": return `${base} bg-green-100 text-green-800`;
+        default: return `${base} bg-gray-100 text-gray-700`;
+      }
+    }
+
+    // Listen auth state & load farmer data
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "farmer-login.html";
+        return;
+      }
+
+      // fetch farmer doc (support both 'farmers' and 'users' collections)
+      const fRef = doc(db, "farmers", user.uid);
+      const fSnap = await getDoc(fRef);
+      let farmerData = null;
+      if (fSnap.exists()) farmerData = fSnap.data();
+      else {
+        const uRef = doc(db, "users", user.uid);
+        const uSnap = await getDoc(uRef);
+        if (uSnap.exists() && uSnap.data().role === "farmer") farmerData = uSnap.data();
+      }
+
+      // If no farmer record or not approved, redirect
+      if (!farmerData) {
+        alert("No farmer record found. Please register.");
+        await signOut(auth);
+        window.location.href = "farmer-login.html";
+        return;
+      }
+
+      const approved = (farmerData.approved === true) || (farmerData.status && farmerData.status.toLowerCase() === "approved");
+      farmerNameEl.textContent = farmerData.name || user.displayName || "Farmer";
+      farmerEmailEl.textContent = farmerData.email || user.email || "";
+      farmerLocationEl.textContent = farmerData.location ? `Location: ${farmerData.location}` : "";
+
+      approvalBadge.textContent = approved ? "Approved" : "Pending Approval";
+      approvalBadge.className = approved ? "inline-block bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium" : "inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium";
+
+      if (!approved) {
+        alert("Your account is not yet approved by admin. You will be redirected.");
+        await signOut(auth);
+        window.location.href = "farmer-login.html";
+        return;
+      }
+
+      // Setup live listener for subscriptions assigned to this farmer
+      if (subsUnsub) subsUnsub(); // cleanup old
+      const q = query(collection(db, "subscriptions"), where("assignedFarmerId", "==", user.uid));
+      subsUnsub = onSnapshot(q, async (snap) => {
+        assignedList.innerHTML = "";
+        let any = false;
+        let earningsSum = 0;
+
+        for (const docSnap of snap.docs) {
+          const s = docSnap.data();
+          // optionally skip inactive subscriptions (if you used isActive)
+          if (s.isActive === false) continue;
+
+          any = true;
+          // fetch user name if possible
+          let customerName = s.userName || "Customer";
+          if (!s.userName && s.userId) {
+            try {
+              const uSnap = await getDoc(doc(db, "users", s.userId));
+              if (uSnap.exists()) customerName = uSnap.data().name || customerName;
+            } catch(e){
+              /* ignore */
+            }
+          }
+
+          // compute estimated earning (if fields exist); otherwise don't show
+          const earning = s.farmerEarning || s.totalAmount || 0;
+          if (s.deliveryStatus && s.deliveryStatus.toLowerCase() === "delivered") earningsSum += (typeof earning === "number" ? earning : 0);
+
+          // render card
+          const card = document.createElement("div");
+          card.className = "bg-white rounded-xl shadow p-4 flex flex-col md:flex-row md:justify-between md:items-center";
+          card.innerHTML = `
+            <div class="flex-1">
+              <div class="flex items-center gap-3">
+                <div>
+                  <div class="text-sm text-gray-500">${customerName}</div>
+                  <div class="text-lg font-semibold text-gray-800">${s.planType || s.plan || "Plan"}</div>
+                </div>
+              </div>
+
+              <div class="mt-2 text-sm text-gray-600 space-y-1">
+                <div><strong>Qty:</strong> ${s.quantity || "-"} L/day</div>
+                <div><strong>Start:</strong> ${s.startDate || (s.createdAt ? new Date(s.createdAt.seconds*1000).toLocaleDateString() : "-")}</div>
+                <div><strong>Delivery status:</strong> <span class="ml-2">${statusBadge(s.deliveryStatus)}</span></div>
+                ${earning ? `<div><strong>Estimated earning:</strong> ₹${earning}</div>`: ""}
+              </div>
+            </div>
+
+            <div class="mt-4 md:mt-0 md:ml-6 flex flex-col gap-2">
+              <!-- Buttons created client-side below -->
+            </div>
+          `;
+
+          // add action buttons depending on status
+          const actionsDiv = card.querySelector("div > div:nth-child(2)"); // last div
+          // We'll create buttons programmatically to attach closures with doc id
+          const btnContainer = card.querySelector(".mt-4.md\\:mt-0.md\\:ml-6") || card.lastElementChild;
+
+          // function to create a button
+          function makeBtn(text, classes, onClick) {
+            const b = document.createElement("button");
+            b.textContent = text;
+            b.className = classes + " px-3 py-2 rounded-lg text-sm font-medium";
+            b.addEventListener("click", onClick);
+            return b;
+          }
+
+          const docId = docSnap.id;
+          const ds = (s.deliveryStatus || "Pending").toLowerCase();
+
+          // If Assigned -> show Approve
+          if (ds === "assigned" || ds === "pending") {
+            const approveBtn = makeBtn("Approve", "bg-yellow-500 text-white hover:bg-yellow-600", async () => {
+              await updateDoc(doc(db, "subscriptions", docId), {
+                deliveryStatus: "Approved",
+                farmerApproval: true,
+                updatedAt: serverTimestamp()
+              });
+            });
+            btnContainer.appendChild(approveBtn);
+          }
+
+          // If Approved -> allow Processed
+          if (ds === "approved") {
+            const processBtn = makeBtn("Mark Processed", "bg-indigo-600 text-white hover:bg-indigo-700", async () => {
+              await updateDoc(doc(db, "subscriptions", docId), {
+                deliveryStatus: "Processed",
+                updatedAt: serverTimestamp()
+              });
+            });
+            btnContainer.appendChild(processBtn);
+          }
+
+          // If Processed -> allow Delivered
+          if (ds === "processed") {
+            const deliveredBtn = makeBtn("Mark Delivered", "bg-green-600 text-white hover:bg-green-700", async () => {
+              await updateDoc(doc(db, "subscriptions", docId), {
+                deliveryStatus: "Delivered",
+                deliveredAt: serverTimestamp()
+              });
+            });
+            btnContainer.appendChild(deliveredBtn);
+          }
+
+          // Always allow a Refresh button
+          const refreshBtn = makeBtn("Refresh", "bg-gray-100 text-gray-700 hover:bg-gray-200", async () => {
+            // simple refresh: do nothing — onSnapshot updates automatically. But we can re-run nothing.
+          });
+          btnContainer.appendChild(refreshBtn);
+
+          assignedList.appendChild(card);
+        } // end for
+
+        // show earnings
+        earningsEl.textContent = `₹${earningsSum}`;
+
+        if (!any) {
+          noAssigned.textContent = "No subscriptions are assigned to you yet.";
+          assignedList.innerHTML = "";
+        } else {
+          noAssigned.textContent = "";
+        }
+      });
+    });
   </script>
 </body>
 </html>
