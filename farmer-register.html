@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Registration - Milk Delivery</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f9fdf9; font-family: 'Segoe UI', sans-serif; }
+    .navbar { background: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .navbar-brand { font-weight: bold; color: #198754 !important; font-size: 1.5rem; }
+    .form-container { max-width: 500px; margin: 60px auto; padding: 30px; background: #fff;
+      border-radius: 15px; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); }
+    .form-title { text-align: center; font-weight: bold; margin-bottom: 10px; color: #198754; }
+    .form-subtitle { text-align: center; margin-bottom: 20px; color: #555; }
+    .btn-success { width: 100%; border-radius: 10px; padding: 10px; }
+    .extra-links { text-align: center; margin-top: 15px; }
+    .extra-links a { text-decoration: none; color: #198754; }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light">
+    <div class="container">
+      <a class="navbar-brand" href="#">🌱 Farmer Panel</a>
+      <div class="d-flex">
+        <a href="farmer-register.html" class="btn btn-outline-success me-2">Register</a>
+        <a href="farmer-login.html" class="btn btn-success">Login</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Farmer Registration Form -->
+  <div class="form-container">
+    <h2 class="form-title">Farmer Registration</h2>
+    <p class="form-subtitle">Register to deliver milk & products</p>
+    
+    <form id="farmerRegisterForm">
+      <div class="mb-3">
+        <label>Full Name</label>
+        <input type="text" id="name" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label>Email</label>
+        <input type="email" id="email" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label>Password</label>
+        <input type="password" id="password" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label>Phone</label>
+        <input type="text" id="phone" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label>Location</label>
+        <input type="text" id="location" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-success">Register</button>
+    </form>
+
+    <div class="extra-links">
+      <p>Already registered? <a href="farmer-login.html">Login here</a></p>
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
+      authDomain: "milqly.firebaseapp.com",
+      projectId: "milqly",
+      storageBucket: "milqly.firebasestorage.app",
+      messagingSenderId: "509357207390",
+      appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
+      measurementId: "G-Z576VSVC5J"
+    };
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    document.getElementById("farmerRegisterForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const phone = document.getElementById("phone").value;
+      const location = document.getElementById("location").value;
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          return db.collection("farmers").doc(user.uid).set({
+            name, email, phone, location,
+            approved: false, // default pending
+            createdAt: new Date()
+          });
+        })
+        .then(() => {
+          alert("Registration successful! Wait for admin approval.");
+          window.location.href = "farmer-login.html";
+        })
+        .catch((error) => {
+          alert("Error: " + error.message);
+        });
+    });
+  </script>
+</body>
+</html>
