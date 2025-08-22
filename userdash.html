@@ -36,15 +36,25 @@
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  <!-- ✅ Firebase v8 scripts -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-    import { firebaseConfig } from "./firebaseConfig.js";
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+  <script>
+    // ✅ Your config
+    const firebaseConfig = {
+      apiKey: "YOUR-KEY",
+      authDomain: "YOUR-PROJECT.firebaseapp.com",
+      projectId: "YOUR-PROJECT",
+      storageBucket: "YOUR-PROJECT.appspot.com",
+      messagingSenderId: "SENDER-ID",
+      appId: "APP-ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
     const userName = document.getElementById("userName");
     const userEmail = document.getElementById("userEmail");
@@ -52,7 +62,7 @@
     const userSubscription = document.getElementById("userSubscription");
     const userOrders = document.getElementById("userOrders");
 
-    onAuthStateChanged(auth, async (user) => {
+    auth.onAuthStateChanged(async (user) => {
       if (!user) {
         window.location.href = "userLogin.html";
         return;
@@ -60,9 +70,9 @@
 
       try {
         // --- Profile ---
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          let data = userDoc.data();
+        const userDoc = await db.collection("users").doc(user.uid).get();
+        if (userDoc.exists) {
+          const data = userDoc.data();
           userName.textContent = data.name || "User";
           userEmail.textContent = data.email || user.email;
           userPhone.textContent = data.phone || "Not set";
@@ -73,50 +83,53 @@
         }
 
         // --- Subscription ---
-        try {
-          const subSnap = await getDocs(query(collection(db, "subscriptions"), where("userId", "==", user.uid)));
-          if (!subSnap.empty) {
-            let subs = [];
-            subSnap.forEach(d => subs.push(d.data().plan + " (" + (d.data().status || "Active") + ")"));
-            userSubscription.textContent = subs.join(", ");
-          } else {
-            userSubscription.textContent = "No subscription found";
-          }
-        } catch (e) {
-          console.error("Subscription error:", e);
-          userSubscription.textContent = "Error loading subscription";
-        }
+        db.collection("subscriptions").where("userId", "==", user.uid).get()
+          .then(snapshot => {
+            if (!snapshot.empty) {
+              let subs = [];
+              snapshot.forEach(doc => {
+                const d = doc.data();
+                subs.push(d.plan + " (" + (d.status || "Active") + ")");
+              });
+              userSubscription.textContent = subs.join(", ");
+            } else {
+              userSubscription.textContent = "No subscription found";
+            }
+          })
+          .catch(err => {
+            console.error("Subscription error:", err);
+            userSubscription.textContent = "Error loading subscription";
+          });
 
         // --- Orders ---
-        try {
-          const orderSnap = await getDocs(query(collection(db, "orders"), where("userId", "==", user.uid)));
-          userOrders.innerHTML = "";
-          if (!orderSnap.empty) {
-            orderSnap.forEach(d => {
-              let li = document.createElement("li");
-              li.className = "list-group-item";
-              li.textContent = `${d.data().item || "Item"} - ${d.data().status || "Pending"}`;
-              userOrders.appendChild(li);
-            });
-          } else {
-            userOrders.innerHTML = "<li class='list-group-item'>No orders found</li>";
-          }
-        } catch (e) {
-          console.error("Orders error:", e);
-          userOrders.innerHTML = "<li class='list-group-item'>Error loading orders</li>";
-        }
+        db.collection("orders").where("userId", "==", user.uid).get()
+          .then(snapshot => {
+            userOrders.innerHTML = "";
+            if (!snapshot.empty) {
+              snapshot.forEach(doc => {
+                const d = doc.data();
+                let li = document.createElement("li");
+                li.className = "list-group-item";
+                li.textContent = `${d.item || "Item"} - ${d.status || "Pending"}`;
+                userOrders.appendChild(li);
+              });
+            } else {
+              userOrders.innerHTML = "<li class='list-group-item'>No orders found</li>";
+            }
+          })
+          .catch(err => {
+            console.error("Orders error:", err);
+            userOrders.innerHTML = "<li class='list-group-item'>Error loading orders</li>";
+          });
 
       } catch (err) {
         console.error("Profile error:", err);
         userName.textContent = "Error loading profile";
-        userSubscription.textContent = "Error";
-        userOrders.innerHTML = "<li class='list-group-item'>Error</li>";
       }
     });
 
-    // --- Logout ---
     document.getElementById("logoutBtn").addEventListener("click", () => {
-      signOut(auth).then(() => window.location.href = "userLogin.html");
+      auth.signOut().then(() => window.location.href = "userLogin.html");
     });
   </script>
 </body>
