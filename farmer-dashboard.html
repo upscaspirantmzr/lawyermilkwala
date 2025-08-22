@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Dashboard - Milk Delivery</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="logo">🥛 Milk Delivery</div>
+    <ul>
+      <li><a href="farmer-dashboard.html" class="active">Dashboard</a></li>
+      <li><a href="#" id="logoutBtn">Logout</a></li>
+    </ul>
+  </nav>
+
+  <!-- Dashboard -->
+  <div class="dashboard-container">
+    <h2>Welcome Farmer</h2>
+    <div id="farmerInfo"></div>
+
+    <h3>Assigned Subscriptions</h3>
+    <div id="subscriptions"></div>
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+    import { firebaseConfig } from "./firebaseConfig.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const farmerInfo = document.getElementById("farmerInfo");
+    const subscriptionsDiv = document.getElementById("subscriptions");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const farmerRef = doc(db, "farmers", user.uid);
+        const farmerSnap = await getDoc(farmerRef);
+
+        if (farmerSnap.exists()) {
+          const farmerData = farmerSnap.data();
+          farmerInfo.innerHTML = `
+            <p><strong>Name:</strong> ${farmerData.fullName}</p>
+            <p><strong>Email:</strong> ${farmerData.email}</p>
+            <p><strong>Status:</strong> ${farmerData.status}</p>
+          `;
+
+          if (farmerData.subscriptions && farmerData.subscriptions.length > 0) {
+            subscriptionsDiv.innerHTML = "";
+            farmerData.subscriptions.forEach((sub, index) => {
+              subscriptionsDiv.innerHTML += `
+                <div class="card">
+                  <p><strong>Customer:</strong> ${sub.customerName}</p>
+                  <p><strong>Plan:</strong> ${sub.plan}</p>
+                  <p><strong>Status:</strong> ${sub.deliveryStatus}</p>
+                  <select onchange="updateStatus('${user.uid}', ${index}, this.value)">
+                    <option value="Approved" ${sub.deliveryStatus === 'Approved' ? 'selected' : ''}>Approved</option>
+                    <option value="Processed" ${sub.deliveryStatus === 'Processed' ? 'selected' : ''}>Processed</option>
+                    <option value="Delivered" ${sub.deliveryStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                  </select>
+                </div>
+              `;
+            });
+          } else {
+            subscriptionsDiv.innerHTML = "<p>No subscriptions assigned yet.</p>";
+          }
+        } else {
+          farmerInfo.innerHTML = "<p>Farmer record not found!</p>";
+        }
+      } else {
+        window.location.href = "farmer-login.html";
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await signOut(auth);
+      window.location.href = "farmer-login.html";
+    });
+
+    // update subscription status
+    window.updateStatus = async (farmerId, index, newStatus) => {
+      const farmerRef = doc(db, "farmers", farmerId);
+      const farmerSnap = await getDoc(farmerRef);
+      if (farmerSnap.exists()) {
+        let farmerData = farmerSnap.data();
+        farmerData.subscriptions[index].deliveryStatus = newStatus;
+        await updateDoc(farmerRef, { subscriptions: farmerData.subscriptions });
+        alert("Status updated to " + newStatus);
+      }
+    };
+  </script>
+</body>
+</html>
