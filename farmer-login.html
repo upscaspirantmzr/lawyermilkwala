@@ -1,72 +1,123 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Farmer Login - Milk Delivery</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Farmer Login • Milqly</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <!-- Navbar -->
-  <nav class="navbar">
-    <div class="logo">🥛 Milk Delivery</div>
-    <ul>
-      <li><a href="index.html">Home</a></li>
-      <li><a href="farmer-register.html">Register</a></li>
-      <li><a href="farmer-login.html" class="active">Login</a></li>
-    </ul>
-  </nav>
+<body class="bg-gradient-to-b from-green-50 to-blue-50 min-h-screen flex items-center justify-center p-4">
 
-  <!-- Login Form -->
-  <div class="form-container">
-    <h2>Farmer Login</h2>
-    <form id="farmerLoginForm">
-      <input type="email" id="farmerEmail" placeholder="Enter your email" required>
-      <input type="password" id="farmerPassword" placeholder="Enter your password" required>
-      <button type="submit">Login</button>
-    </form>
-    <p id="loginMessage"></p>
+  <!-- Card -->
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+    <div class="p-6 bg-gradient-to-r from-green-400 to-blue-500 text-white">
+      <h1 class="text-2xl font-bold">🌱 Farmer Login</h1>
+      <p class="text-sm opacity-90 mt-1">Sign in to view assigned subscriptions & update delivery status.</p>
+    </div>
+
+    <div class="p-6">
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Email</label>
+          <input id="email" type="email" required class="mt-1 block w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="farmer@example.com" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Password</label>
+          <input id="password" type="password" required class="mt-1 block w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="••••••••" />
+        </div>
+
+        <div>
+          <button class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl" type="submit">Login</button>
+        </div>
+
+        <p id="msg" class="text-sm text-center text-red-600"></p>
+
+        <p class="text-center text-sm text-gray-600">
+          New here? <a href="farmer-register.html" class="text-green-600 font-medium hover:underline">Register as Farmer</a>
+        </p>
+      </form>
+    </div>
   </div>
 
-  <!-- Firebase -->
+  <!-- Firebase + Script -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    import { firebaseConfig } from "./firebaseConfig.js";
+    // ========= Your Firebase config (provided) =========
+    const firebaseConfig = {
+      apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
+      authDomain: "milqly.firebaseapp.com",
+      projectId: "milqly",
+      storageBucket: "milqly.firebasestorage.app",
+      messagingSenderId: "509357207390",
+      appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
+      measurementId: "G-Z576VSVC5J"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    document.getElementById("farmerLoginForm").addEventListener("submit", async (e) => {
+    const $ = id => document.getElementById(id);
+    const msgEl = $("msg");
+
+    // Helper: tolerant check for approval
+    function isApprovedDoc(data){
+      if (!data) return false;
+      if (data.approved === true) return true;
+      if (data.status && (data.status.toLowerCase() === "approved")) return true;
+      return false;
+    }
+
+    $("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = document.getElementById("farmerEmail").value;
-      const password = document.getElementById("farmerPassword").value;
+      msgEl.textContent = "";
+      const email = $("email").value.trim();
+      const password = $("password").value;
 
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // check approval status in Firestore
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        const user = credential.user;
+        // check farmers collection first
         const farmerRef = doc(db, "farmers", user.uid);
         const farmerSnap = await getDoc(farmerRef);
 
         if (farmerSnap.exists()) {
           const data = farmerSnap.data();
-          if (data.status === "approved") {
+          if (isApprovedDoc(data)) {
+            // allowed
             window.location.href = "farmer-dashboard.html";
+            return;
           } else {
-            document.getElementById("loginMessage").innerText = "Your account is pending admin approval.";
+            msgEl.textContent = "Your account is pending admin approval. You will be notified once approved.";
             await signOut(auth);
+            return;
           }
-        } else {
-          document.getElementById("loginMessage").innerText = "No farmer record found!";
         }
 
-      } catch (error) {
-        document.getElementById("loginMessage").innerText = "Login failed: " + error.message;
+        // fallback: check users collection for role: "farmer"
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const ud = userSnap.data();
+          if (ud.role === "farmer" && isApprovedDoc(ud)) {
+            window.location.href = "farmer-dashboard.html";
+            return;
+          } else {
+            msgEl.textContent = "Your account is pending admin approval or not registered as a farmer.";
+            await signOut(auth);
+            return;
+          }
+        }
+
+        // Not found anywhere
+        msgEl.textContent = "Farmer record not found. Please register first.";
+        await signOut(auth);
+      } catch (err) {
+        msgEl.textContent = err.message || "Login failed.";
       }
     });
   </script>
