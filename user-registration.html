@@ -1,98 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Milk Delivery – Registration</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Milqly</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gradient-to-r from-blue-50 to-blue-100 min-h-screen flex flex-col">
+<body class="bg-gradient-to-r from-green-400 via-blue-400 to-purple-500 min-h-screen flex items-center justify-center">
+  <div class="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-md">
+    <h2 class="text-3xl font-bold text-center text-blue-600 mb-6">Create Account</h2>
+    <form id="registerForm" class="space-y-4">
+      <input type="text" id="name" placeholder="Full Name" class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-400" required>
+      <input type="email" id="email" placeholder="Email Address" class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-400" required>
+      <input type="password" id="password" placeholder="Password" class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-400" required>
+      <input type="text" id="phone" placeholder="Phone Number" class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-400" required>
+      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">Register</button>
+    </form>
+    <p class="text-center text-gray-600 mt-4">
+      Already have an account? 
+      <a href="login.html" class="text-blue-600 font-semibold hover:underline">Login</a>
+    </p>
+  </div>
 
-  <!-- Navbar -->
-  <nav class="bg-white shadow-md sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-blue-600 flex items-center gap-2">
-        🥛 Milk Delivery
-      </h1>
-      <div class="space-x-4">
-        <a href="index.html" class="text-gray-700 hover:text-blue-600">Home</a>
-        <a href="registration.html" class="text-blue-600 font-semibold">Register</a>
-        <a href="login.html" class="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700">Login</a>
-      </div>
-    </div>
-  </nav>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
 
-  <!-- Registration Form -->
-  <section class="flex-1 flex items-center justify-center py-10 px-4">
-    <div class="bg-white shadow-lg rounded-2xl p-8 max-w-lg w-full">
-      <h2 class="text-3xl font-bold text-center text-blue-600">Customer Registration</h2>
-      <p class="text-gray-600 text-center mt-2">Create your account to start fresh milk subscription</p>
+  <script>
+    // ✅ Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
+      authDomain: "milqly.firebaseapp.com",
+      projectId: "milqly",
+      storageBucket: "milqly.firebasestorage.app",
+      messagingSenderId: "509357207390",
+      appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
+      measurementId: "G-Z576VSVC5J"
+    };
 
-      <form action="#" method="POST" class="mt-6 space-y-4">
-        <!-- Full Name -->
-        <div>
-          <label class="block text-gray-700 font-medium">Full Name</label>
-          <input type="text" name="name" placeholder="Enter your full name" required
-            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" />
-        </div>
+    // ✅ Init Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-        <!-- Email -->
-        <div>
-          <label class="block text-gray-700 font-medium">Email</label>
-          <input type="email" name="email" placeholder="Enter your email" required
-            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" />
-        </div>
+    // ✅ Handle Registration
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const phone = document.getElementById("phone").value;
 
-        <!-- Phone -->
-        <div>
-          <label class="block text-gray-700 font-medium">Phone Number</label>
-          <input type="tel" name="phone" placeholder="Enter your phone number" required
-            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" />
-        </div>
+      try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
 
-        <!-- Address -->
-        <div>
-          <label class="block text-gray-700 font-medium">Address</label>
-          <textarea name="address" placeholder="Enter your delivery address" required
-            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
-        </div>
+        await db.collection("users").doc(user.uid).set({
+          name,
+          email,
+          phone,
+          role: "user",
+          createdAt: new Date()
+        });
 
-        <!-- Password -->
-        <div>
-          <label class="block text-gray-700 font-medium">Password</label>
-          <input type="password" name="password" placeholder="Create a password" required
-            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none" />
-        </div>
-
-        <!-- Subscription Plan -->
-        <div>
-          <label class="block text-gray-700 font-medium">Subscription Plan</label>
-          <select name="plan" required
-            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none">
-            <option value="">Select Plan</option>
-            <option value="weekly">Weekly Subscription</option>
-            <option value="monthly">Monthly Subscription</option>
-          </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit"
-          class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl shadow hover:bg-blue-700 transition">
-          Register
-        </button>
-      </form>
-
-      <p class="text-center text-gray-600 mt-4">
-        Already have an account? 
-        <a href="login.html" class="text-blue-600 font-medium hover:underline">Login here</a>
-      </p>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="bg-gray-900 text-gray-300 py-6 text-center">
-    <p>© 2025 Milk Delivery. All rights reserved.</p>
-  </footer>
-
+        alert("✅ Registration successful! Redirecting to login...");
+        window.location.href = "login.html";
+      } catch (error) {
+        alert("❌ Error: " + error.message);
+      }
+    });
+  </script>
 </body>
 </html>
