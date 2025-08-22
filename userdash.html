@@ -5,47 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <style>
-    body {
-      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-      font-family: 'Segoe UI', sans-serif;
-    }
-    .dashboard-card {
-      border-radius: 15px;
-      box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
-    }
-    .header {
-      background: #007bff;
-      color: white;
-      padding: 15px;
-      border-radius: 15px 15px 0 0;
-    }
-  </style>
 </head>
-<body>
+<body class="bg-light">
   <div class="container mt-4">
-    <div class="dashboard-card bg-white">
-      <div class="header d-flex justify-content-between align-items-center">
-        <h4 class="mb-0">User Dashboard</h4>
+    <div class="card shadow-lg">
+      <div class="card-header bg-primary text-white d-flex justify-content-between">
+        <h5 class="mb-0">User Dashboard</h5>
         <button id="logoutBtn" class="btn btn-light btn-sm">Logout</button>
       </div>
-      <div class="p-4">
+      <div class="card-body">
 
         <!-- Profile -->
-        <h5>👤 Profile</h5>
-        <p><strong>Name:</strong> <span id="userName">Loading...</span></p>
-        <p><strong>Email:</strong> <span id="userEmail">Loading...</span></p>
-        <p><strong>Phone:</strong> <span id="userPhone">Loading...</span></p>
+        <h6>👤 Profile</h6>
+        <p><b>Name:</b> <span id="userName">Loading...</span></p>
+        <p><b>Email:</b> <span id="userEmail">Loading...</span></p>
+        <p><b>Phone:</b> <span id="userPhone">Loading...</span></p>
         <hr>
 
         <!-- Subscription -->
-        <h5>📦 Subscription</h5>
+        <h6>📦 Subscription</h6>
         <p id="userSubscription">Loading...</p>
         <hr>
 
         <!-- Orders -->
-        <h5>🛒 Orders</h5>
+        <h6>🛒 Orders</h6>
         <ul id="userOrders" class="list-group">
           <li class="list-group-item">Loading...</li>
         </ul>
@@ -53,7 +36,6 @@
     </div>
   </div>
 
-  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
@@ -77,9 +59,8 @@
       }
 
       try {
-        // 🔹 Profile
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
+        // --- Profile ---
+        const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           let data = userDoc.data();
           userName.textContent = data.name || "User";
@@ -91,40 +72,49 @@
           userPhone.textContent = "Not set";
         }
 
-        // 🔹 Subscription
-        const subQuery = query(collection(db, "subscriptions"), where("userId", "==", user.uid));
-        const subSnap = await getDocs(subQuery);
-        if (!subSnap.empty) {
-          let subs = [];
-          subSnap.forEach(doc => subs.push(doc.data().plan + " (" + doc.data().status + ")"));
-          userSubscription.textContent = subs.join(", ");
-        } else {
-          userSubscription.textContent = "No subscription yet";
+        // --- Subscription ---
+        try {
+          const subSnap = await getDocs(query(collection(db, "subscriptions"), where("userId", "==", user.uid)));
+          if (!subSnap.empty) {
+            let subs = [];
+            subSnap.forEach(d => subs.push(d.data().plan + " (" + (d.data().status || "Active") + ")"));
+            userSubscription.textContent = subs.join(", ");
+          } else {
+            userSubscription.textContent = "No subscription found";
+          }
+        } catch (e) {
+          console.error("Subscription error:", e);
+          userSubscription.textContent = "Error loading subscription";
         }
 
-        // 🔹 Orders
-        const orderQuery = query(collection(db, "orders"), where("userId", "==", user.uid));
-        const orderSnap = await getDocs(orderQuery);
-        userOrders.innerHTML = "";
-        if (!orderSnap.empty) {
-          orderSnap.forEach(doc => {
-            let li = document.createElement("li");
-            li.className = "list-group-item";
-            li.textContent = `Order: ${doc.data().item || "Unknown"} - ${doc.data().status || "Pending"}`;
-            userOrders.appendChild(li);
-          });
-        } else {
-          userOrders.innerHTML = "<li class='list-group-item'>No orders yet</li>";
+        // --- Orders ---
+        try {
+          const orderSnap = await getDocs(query(collection(db, "orders"), where("userId", "==", user.uid)));
+          userOrders.innerHTML = "";
+          if (!orderSnap.empty) {
+            orderSnap.forEach(d => {
+              let li = document.createElement("li");
+              li.className = "list-group-item";
+              li.textContent = `${d.data().item || "Item"} - ${d.data().status || "Pending"}`;
+              userOrders.appendChild(li);
+            });
+          } else {
+            userOrders.innerHTML = "<li class='list-group-item'>No orders found</li>";
+          }
+        } catch (e) {
+          console.error("Orders error:", e);
+          userOrders.innerHTML = "<li class='list-group-item'>Error loading orders</li>";
         }
 
       } catch (err) {
-        console.error("Dashboard load error:", err);
-        userName.textContent = "Error loading data";
+        console.error("Profile error:", err);
+        userName.textContent = "Error loading profile";
         userSubscription.textContent = "Error";
-        userOrders.innerHTML = "<li class='list-group-item'>Error loading orders</li>";
+        userOrders.innerHTML = "<li class='list-group-item'>Error</li>";
       }
     });
 
+    // --- Logout ---
     document.getElementById("logoutBtn").addEventListener("click", () => {
       signOut(auth).then(() => window.location.href = "userLogin.html");
     });
