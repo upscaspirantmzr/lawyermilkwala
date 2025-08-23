@@ -2,83 +2,86 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #FFDEE9, #B5FFFC);
       margin: 0;
-      background: linear-gradient(to right, #f8f9fa, #eef2f3);
+      padding: 0;
     }
-    header {
-      background: linear-gradient(to right, #4e54c8, #8f94fb);
-      color: white;
+    .dashboard {
+      max-width: 1000px;
+      margin: 20px auto;
       padding: 15px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0px 4px 15px rgba(0,0,0,0.2);
     }
-    .container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      padding: 20px;
+    h1 {
+      text-align: center;
+      background: linear-gradient(90deg, #673AB7, #9C27B0);
+      color: white;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 20px;
+    }
+    h2 {
+      font-size: 18px;
+      color: #333;
+      margin-top: 20px;
+      border-left: 5px solid #9C27B0;
+      padding-left: 10px;
     }
     .card {
-      background: white;
-      padding: 20px;
+      background: #f9f9f9;
+      margin: 12px 0;
+      padding: 15px;
       border-radius: 12px;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+      box-shadow: 0px 3px 8px rgba(0,0,0,0.1);
     }
-    .card h3 {
-      margin-top: 0;
-      margin-bottom: 10px;
-    }
-    .blue { border-top: 6px solid #4e54c8; }
-    .green { border-top: 6px solid #28a745; }
-    .orange { border-top: 6px solid #fd7e14; }
-    button {
-      background: #4e54c8;
-      color: white;
+    .btn {
+      padding: 8px 12px;
+      margin: 5px;
       border: none;
-      padding: 6px 12px;
       border-radius: 6px;
       cursor: pointer;
-      margin-top: 5px;
+      font-weight: bold;
+      transition: 0.3s;
+      font-size: 14px;
     }
-    button:hover {
-      background: #3b42a1;
-    }
-    select {
-      padding: 5px;
-      margin-left: 8px;
+    .btn-approve { background: #4CAF50; color: white; }
+    .btn-assign { background: #2196F3; color: white; }
+    .btn:hover { opacity: 0.85; }
+    @media (max-width: 600px) {
+      .dashboard { margin: 10px; padding: 10px; }
+      h1 { font-size: 18px; }
+      h2 { font-size: 16px; }
     }
   </style>
 </head>
 <body>
-  <header>Admin Dashboard</header>
-  <div class="container">
-    <div class="card blue">
-      <h3>Pending Farmer Applications</h3>
-      <ul id="pendingFarmers"></ul>
-    </div>
+  <div class="dashboard">
+    <h1>Admin Dashboard</h1>
 
-    <div class="card green">
-      <h3>User Subscriptions (Unassigned)</h3>
-      <ul id="unassignedSubs"></ul>
-    </div>
+    <h2>Pending Farmers</h2>
+    <div id="pendingFarmers">Loading...</div>
 
-    <div class="card orange" style="grid-column: span 2;">
-      <h3>Assigned Deliveries</h3>
-      <ul id="assignedDeliveries"></ul>
-    </div>
+    <h2>Approved Farmers</h2>
+    <div id="approvedFarmers">Loading...</div>
+
+    <h2>Subscriptions</h2>
+    <div id="subscriptions">Loading...</div>
   </div>
 
   <script>
-    // ✅ Your Firebase Config here
-   const firebaseConfig = {
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
   apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
   authDomain: "milqly.firebaseapp.com",
   projectId: "milqly",
@@ -87,88 +90,105 @@
   appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
   measurementId: "G-Z576VSVC5J"
 };
+
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Load Pending Farmers
-    function loadPendingFarmers() {
-      db.collection("farmers").where("status", "==", "pending")
-        .onSnapshot(snapshot => {
-          let list = document.getElementById("pendingFarmers");
-          list.innerHTML = "";
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        // 🚨 check if this is admin
+        if (user.uid !== "ADMIN_UID_HERE") {
+          alert("Access denied. Only Admin allowed.");
+          auth.signOut();
+          return;
+        }
+
+        // Load pending farmers
+        db.collection("farmers").where("status", "==", "pending").onSnapshot(snapshot => {
+          const container = document.getElementById("pendingFarmers");
+          container.innerHTML = "";
+          if (snapshot.empty) {
+            container.innerHTML = "<p>No pending farmers.</p>";
+          }
           snapshot.forEach(doc => {
-            let farmer = doc.data();
-            let li = document.createElement("li");
-            li.innerHTML = `
-              ${farmer.name} (${farmer.email})
-              <button onclick="approveFarmer('${doc.id}')">Approve</button>
+            const data = doc.data();
+            const div = document.createElement("div");
+            div.classList.add("card");
+            div.innerHTML = `
+              <p><b>Name:</b> ${data.name || "N/A"}</p>
+              <p><b>Email:</b> ${data.email || "N/A"}</p>
             `;
-            list.appendChild(li);
+            const approveBtn = document.createElement("button");
+            approveBtn.classList.add("btn", "btn-approve");
+            approveBtn.innerText = "Approve Farmer";
+            approveBtn.onclick = () => db.collection("farmers").doc(doc.id).update({ status: "approved" });
+            div.appendChild(approveBtn);
+            container.appendChild(div);
           });
         });
-    }
 
-    function approveFarmer(farmerId) {
-      db.collection("farmers").doc(farmerId).update({ status: "approved" });
-    }
-
-    // Load Unassigned User Subscriptions
-    function loadUnassignedSubs() {
-      db.collection("subscriptions").where("assignedTo", "==", null)
-        .onSnapshot(async snapshot => {
-          let list = document.getElementById("unassignedSubs");
-          list.innerHTML = "";
-
-          // Fetch approved farmers for dropdown
-          let farmersSnap = await db.collection("farmers").where("status", "==", "approved").get();
-          let farmerOptions = "";
-          farmersSnap.forEach(f => {
-            farmerOptions += `<option value="${f.id}">${f.data().name}</option>`;
-          });
-
+        // Load approved farmers
+        db.collection("farmers").where("status", "==", "approved").onSnapshot(snapshot => {
+          const container = document.getElementById("approvedFarmers");
+          container.innerHTML = "";
+          if (snapshot.empty) {
+            container.innerHTML = "<p>No approved farmers.</p>";
+          }
           snapshot.forEach(doc => {
-            let sub = doc.data();
-            let li = document.createElement("li");
-            li.innerHTML = `
-              ${sub.userEmail} → ${sub.plan}
-              <select id="farmerSelect-${doc.id}">
-                <option value="">Assign Farmer</option>
-                ${farmerOptions}
-              </select>
-              <button onclick="assignFarmer('${doc.id}')">Assign</button>
-            `;
-            list.appendChild(li);
+            const data = doc.data();
+            const div = document.createElement("div");
+            div.classList.add("card");
+            div.innerHTML = `<p><b>${data.name}</b> (${data.email})</p>`;
+            container.appendChild(div);
           });
         });
-    }
 
-    function assignFarmer(subId) {
-      let select = document.getElementById(`farmerSelect-${subId}`);
-      let farmerId = select.value;
-      if (farmerId) {
-        db.collection("subscriptions").doc(subId).update({ assignedTo: farmerId, status: "assigned" });
+        // Load subscriptions
+        db.collection("subscriptions").onSnapshot(snapshot => {
+          const container = document.getElementById("subscriptions");
+          container.innerHTML = "";
+          if (snapshot.empty) {
+            container.innerHTML = "<p>No subscriptions yet.</p>";
+          }
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const div = document.createElement("div");
+            div.classList.add("card");
+            div.innerHTML = `
+              <p><b>User:</b> ${data.userName || "N/A"}</p>
+              <p><b>Subscription:</b> ${data.subscriptionType}</p>
+              <p><b>Status:</b> ${data.status}</p>
+              <p><b>Assigned Farmer:</b> ${data.farmerId || "Not assigned"}</p>
+            `;
+            // Assign farmer dropdown
+            const assignBtn = document.createElement("button");
+            assignBtn.classList.add("btn", "btn-assign");
+            assignBtn.innerText = "Assign Farmer";
+            assignBtn.onclick = async () => {
+              const farmersSnap = await db.collection("farmers").where("status", "==", "approved").get();
+              if (farmersSnap.empty) {
+                alert("No approved farmers available.");
+                return;
+              }
+              let farmerList = "";
+              farmersSnap.forEach(f => {
+                farmerList += `${f.id}: ${f.data().name}\n`;
+              });
+              const farmerId = prompt("Enter Farmer ID:\n" + farmerList);
+              if (farmerId) {
+                db.collection("subscriptions").doc(doc.id).update({ farmerId: farmerId });
+              }
+            };
+            div.appendChild(assignBtn);
+            container.appendChild(div);
+          });
+        });
+
+      } else {
+        window.location.href = "login.html";
       }
-    }
-
-    // Load Assigned Deliveries
-    function loadAssignedDeliveries() {
-      db.collection("subscriptions").where("status", "==", "assigned")
-        .onSnapshot(snapshot => {
-          let list = document.getElementById("assignedDeliveries");
-          list.innerHTML = "";
-          snapshot.forEach(doc => {
-            let sub = doc.data();
-            let li = document.createElement("li");
-            li.textContent = `${sub.userEmail} → ${sub.plan} (Assigned to Farmer: ${sub.assignedTo})`;
-            list.appendChild(li);
-          });
-        });
-    }
-
-    // Run loaders
-    loadPendingFarmers();
-    loadUnassignedSubs();
-    loadAssignedDeliveries();
+    });
   </script>
 </body>
 </html>
