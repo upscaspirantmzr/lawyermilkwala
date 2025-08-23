@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Dashboard - Milqly</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <!-- Navbar -->
+  <nav class="bg-green-600 p-4 text-white text-center text-xl font-bold shadow">
+    Milqly - Farmer Dashboard
+  </nav>
+
+  <div class="max-w-5xl mx-auto mt-8 p-6 bg-white shadow rounded-xl">
+    <h2 class="text-2xl font-semibold mb-6 text-gray-700">🚜 Assigned Subscriptions</h2>
+    <div id="assignedSubs" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      Loading...
+    </div>
+  </div>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
+      authDomain: "milqly.firebaseapp.com",
+      projectId: "milqly",
+      storageBucket: "milqly.firebasestorage.app",
+      messagingSenderId: "509357207390",
+      appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
+      measurementId: "G-Z576VSVC5J"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const statusSteps = ["Pending Approval", "Approved", "Processed", "Delivered"];
+
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        const farmerId = user.uid;
+
+        // Get all subscriptions assigned to this farmer
+        db.collection("subscriptions").where("farmerId", "==", farmerId)
+          .onSnapshot(snapshot => {
+            let html = "";
+            if (snapshot.empty) {
+              html = "<p>No subscriptions assigned.</p>";
+            } else {
+              snapshot.forEach(doc => {
+                const sub = doc.data();
+                const currentStep = statusSteps.indexOf(sub.deliveryStatus) || 0;
+                const nextStatus = statusSteps[currentStep + 1] || null;
+
+                html += `
+                  <div class="p-4 border rounded shadow bg-gray-100">
+                    <p><strong>User ID:</strong> ${sub.userId}</p>
+                    <p><strong>Plan:</strong> ${sub.plan}</p>
+                    <p><strong>Status:</strong> <span class="font-semibold">${sub.deliveryStatus}</span></p>
+                    ${nextStatus ? 
+                      `<button onclick="updateStatus('${doc.id}', '${nextStatus}')" 
+                        class="mt-2 bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">
+                        Mark as ${nextStatus}
+                      </button>` 
+                      : `<p class="mt-2 text-green-600 font-semibold">✅ Completed</p>`}
+                  </div>
+                `;
+              });
+            }
+            document.getElementById("assignedSubs").innerHTML = html;
+          });
+      } else {
+        window.location.href = "farmer-login.html";
+      }
+    });
+
+    // Update delivery status
+    function updateStatus(subId, status) {
+      db.collection("subscriptions").doc(subId).update({
+        deliveryStatus: status,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  </script>
+</body>
+</html>
