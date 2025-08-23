@@ -2,114 +2,118 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>User Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: Arial, sans-serif; background:#f9f9f9; margin:0; padding:0; }
-    header { background:#4CAF50; color:white; padding:15px; text-align:center; }
-    section { margin:20px; padding:20px; background:white; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-    h2 { margin-top:0; }
-    button { padding:10px 20px; border:none; border-radius:6px; background:#f44336; color:white; cursor:pointer; }
-    button:hover { background:#d32f2f; }
-    .label { font-weight:bold; }
-  </style>
-</head>
-<body>
-  <header>
-    <h2 id="welcome">Loading...</h2>
-  </header>
-
-  <section>
-    <h3>Profile</h3>
-    <p><span class="label">Name:</span> <span id="name">Loading...</span></p>
-    <p><span class="label">Email:</span> <span id="email">Loading...</span></p>
-    <p><span class="label">Address:</span> <span id="address">Loading...</span></p>
-  </section>
-
-  <section>
-    <h3>Subscription</h3>
-    <p><span class="label">Plan:</span> <span id="plan">Loading...</span></p>
-    <p><span class="label">Start:</span> <span id="start">Loading...</span></p>
-    <p><span class="label">End:</span> <span id="end">Loading...</span></p>
-    <p><span class="label">Status:</span> <span id="status">Loading...</span></p>
-  </section>
-
-  <section>
-    <h3>Delivery Status</h3>
-    <p><span class="label">Today:</span> <span id="delivery-status">Loading...</span></p>
-  </section>
-
-  <section>
-    <button onclick="logout()">Logout</button>
-  </section>
-
-  <!-- ✅ Firebase Compat SDKs -->
+  <title>User Dashboard - Milqly</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <!-- Navbar -->
+  <nav class="bg-green-600 p-4 text-white text-center text-xl font-bold shadow">
+    Milqly - User Dashboard
+  </nav>
+
+  <div class="max-w-4xl mx-auto mt-8 p-6 bg-white shadow rounded-xl">
+    <!-- Profile -->
+    <h2 class="text-2xl font-semibold mb-4 text-gray-700">👤 Profile Details</h2>
+    <div id="profileDetails" class="p-4 border rounded bg-gray-100">Loading...</div>
+
+    <!-- Subscription Selection -->
+    <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-700">📦 Select Subscription</h2>
+    <div class="p-4 border rounded bg-gray-100">
+      <select id="subscriptionPlan" class="p-2 border rounded">
+        <option value="">-- Choose a Plan --</option>
+        <option value="weekly">Weekly Subscription</option>
+        <option value="monthly">Monthly Subscription</option>
+      </select>
+      <button onclick="saveSubscription()" class="ml-4 bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">
+        Save
+      </button>
+      <p id="subscriptionMessage" class="mt-2 text-green-600 font-medium"></p>
+    </div>
+
+    <!-- Delivery Status -->
+    <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-700">🚚 Delivery Status</h2>
+    <div id="deliveryStatus" class="p-4 border rounded bg-gray-100">Loading...</div>
+  </div>
 
   <script>
-    // 🔥 Your Firebase Config
-   const firebaseConfig = {
-  apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
-  authDomain: "milqly.firebaseapp.com",
-  projectId: "milqly",
-  storageBucket: "milqly.firebasestorage.app",
-  messagingSenderId: "509357207390",
-  appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
-  measurementId: "G-Z576VSVC5J"
-};
-    // ✅ Initialize Firebase
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
+      authDomain: "milqly.firebaseapp.com",
+      projectId: "milqly",
+      storageBucket: "milqly.firebasestorage.app",
+      messagingSenderId: "509357207390",
+      appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
+      measurementId: "G-Z576VSVC5J"
+    };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // ✅ Auth state listener
+    // Load Dashboard
     auth.onAuthStateChanged(async (user) => {
-      if (!user) {
-        window.location.href = "login.html"; // redirect if not logged in
-        return;
-      }
+      if (user) {
+        const uid = user.uid;
 
-      document.getElementById("welcome").textContent = `Welcome, ${user.displayName || "User"} 👋`;
-
-      try {
-        // 🔹 Profile
-        const userDoc = await db.collection("users").doc(user.uid).get();
+        // Load Profile
+        const userDoc = await db.collection("users").doc(uid).get();
         if (userDoc.exists) {
           const data = userDoc.data();
-          document.getElementById("name").textContent = data.name || "N/A";
-          document.getElementById("email").textContent = user.email;
-          document.getElementById("address").textContent = data.address || "N/A";
+          document.getElementById("profileDetails").innerHTML = `
+            <p><strong>Name:</strong> ${data.name || ""}</p>
+            <p><strong>Email:</strong> ${data.email || ""}</p>
+            <p><strong>Phone:</strong> ${data.phone || ""}</p>
+          `;
+        } else {
+          document.getElementById("profileDetails").innerText = "Profile not found.";
         }
 
-        // 🔹 Subscription
-        const subDoc = await db.collection("subscriptions").doc(user.uid).get();
-        if (subDoc.exists) {
-          const sub = subDoc.data();
-          document.getElementById("plan").textContent = sub.plan || "N/A";
-          document.getElementById("start").textContent = sub.startDate || "N/A";
-          document.getElementById("end").textContent = sub.endDate || "N/A";
-          document.getElementById("status").textContent = sub.status || "N/A";
-        }
+        // Load Subscription
+        db.collection("subscriptions").doc(uid).onSnapshot(doc => {
+          if (doc.exists) {
+            const sub = doc.data();
+            document.getElementById("subscriptionMessage").innerText = "Current Plan: " + sub.plan;
+          }
+        });
 
-        // 🔹 Deliveries
-        const delDoc = await db.collection("deliveries").doc(user.uid).get();
-        if (delDoc.exists) {
-          const del = delDoc.data();
-          document.getElementById("delivery-status").textContent = del.today || "Pending";
-        }
+        // Load Delivery Status
+        db.collection("subscriptions").doc(uid).onSnapshot(doc => {
+          if (doc.exists) {
+            const sub = doc.data();
+            document.getElementById("deliveryStatus").innerText =
+              sub.deliveryStatus || "Not started yet.";
+          } else {
+            document.getElementById("deliveryStatus").innerText = "No subscription found.";
+          }
+        });
 
-      } catch (err) {
-        console.error("Error loading dashboard:", err);
+      } else {
+        window.location.href = "user-login.html"; // redirect if not logged in
       }
     });
 
-    // ✅ Logout
-    function logout() {
-      auth.signOut().then(() => {
-        window.location.href = "login.html";
-      });
+    // Save Subscription
+    function saveSubscription() {
+      const plan = document.getElementById("subscriptionPlan").value;
+      if (!plan) {
+        alert("Please select a subscription plan.");
+        return;
+      }
+      const user = auth.currentUser;
+      if (user) {
+        db.collection("subscriptions").doc(user.uid).set({
+          userId: user.uid,
+          plan: plan,
+          deliveryStatus: "Pending Approval",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+          document.getElementById("subscriptionMessage").innerText = "Subscription saved!";
+        });
+      }
     }
   </script>
 </body>
