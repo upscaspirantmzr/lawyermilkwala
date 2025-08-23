@@ -9,21 +9,19 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gradient-to-br from-yellow-50 to-orange-50 min-h-screen">
+
   <!-- Navbar -->
-  <nav class="bg-green-600 p-4 text-white text-center text-xl font-bold shadow">
-    Milqly - Farmer Dashboard
+  <nav class="bg-gradient-to-r from-yellow-600 to-orange-600 p-4 text-white text-center text-2xl font-bold shadow-lg">
+    🚜 Milqly - Farmer Dashboard
   </nav>
 
-  <div class="max-w-5xl mx-auto mt-8 p-6 bg-white shadow rounded-xl">
-    <h2 class="text-2xl font-semibold mb-6 text-gray-700">🚜 Assigned Subscriptions</h2>
-    <div id="assignedSubs" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      Loading...
-    </div>
+  <div class="max-w-6xl mx-auto mt-10 p-6 space-y-6">
+    <h2 class="text-2xl font-semibold mb-4 text-gray-700">📦 Assigned Deliveries</h2>
+    <div id="deliveriesBox" class="grid md:grid-cols-2 gap-6"></div>
   </div>
 
   <script>
-    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
       authDomain: "milqly.firebaseapp.com",
@@ -37,52 +35,47 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    const statusSteps = ["Pending Approval", "Approved", "Processed", "Delivered"];
+    let currentFarmerId = null;
 
-    auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        const farmerId = user.uid;
-
-        // Get all subscriptions assigned to this farmer
-        db.collection("subscriptions").where("farmerId", "==", farmerId)
-          .onSnapshot(snapshot => {
-            let html = "";
-            if (snapshot.empty) {
-              html = "<p>No subscriptions assigned.</p>";
-            } else {
-              snapshot.forEach(doc => {
-                const sub = doc.data();
-                const currentStep = statusSteps.indexOf(sub.deliveryStatus) || 0;
-                const nextStatus = statusSteps[currentStep + 1] || null;
-
-                html += `
-                  <div class="p-4 border rounded shadow bg-gray-100">
-                    <p><strong>User ID:</strong> ${sub.userId}</p>
-                    <p><strong>Plan:</strong> ${sub.plan}</p>
-                    <p><strong>Status:</strong> <span class="font-semibold">${sub.deliveryStatus}</span></p>
-                    ${nextStatus ? 
-                      `<button onclick="updateStatus('${doc.id}', '${nextStatus}')" 
-                        class="mt-2 bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">
-                        Mark as ${nextStatus}
-                      </button>` 
-                      : `<p class="mt-2 text-green-600 font-semibold">✅ Completed</p>`}
-                  </div>
-                `;
-              });
-            }
-            document.getElementById("assignedSubs").innerHTML = html;
-          });
-      } else {
-        window.location.href = "farmer-login.html";
+    auth.onAuthStateChanged(async user => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
       }
+      currentFarmerId = user.uid;
+      loadDeliveries();
     });
 
-    // Update delivery status
-    function updateStatus(subId, status) {
-      db.collection("subscriptions").doc(subId).update({
-        deliveryStatus: status,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    function loadDeliveries() {
+      db.collection("subscriptions").where("farmerId", "==", currentFarmerId)
+        .onSnapshot(snapshot => {
+          const box = document.getElementById("deliveriesBox");
+          box.innerHTML = "";
+          if (snapshot.empty) {
+            box.innerHTML = `<p class="text-gray-600">No deliveries assigned yet.</p>`;
+            return;
+          }
+          snapshot.forEach(doc => {
+            const sub = doc.data();
+            const id = doc.id;
+            box.innerHTML += `
+              <div class="bg-white shadow-lg rounded-2xl p-6 border-t-4 border-yellow-500">
+                <p><strong>User ID:</strong> ${sub.userId}</p>
+                <p><strong>Plan:</strong> ${sub.plan}</p>
+                <p><strong>Status:</strong> <span class="px-2 py-1 bg-green-100 rounded">${sub.deliveryStatus}</span></p>
+                <div class="mt-3 flex gap-2">
+                  <button onclick="updateStatus('${id}','Approved')" class="bg-blue-500 text-white px-3 py-2 rounded shadow hover:bg-blue-600">Approve</button>
+                  <button onclick="updateStatus('${id}','Processed')" class="bg-yellow-500 text-white px-3 py-2 rounded shadow hover:bg-yellow-600">Process</button>
+                  <button onclick="updateStatus('${id}','Delivered')" class="bg-green-600 text-white px-3 py-2 rounded shadow hover:bg-green-700">Deliver</button>
+                </div>
+              </div>
+            `;
+          });
       });
+    }
+
+    function updateStatus(id, status) {
+      db.collection("subscriptions").doc(id).update({ deliveryStatus: status });
     }
   </script>
 </body>
