@@ -9,38 +9,42 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gradient-to-br from-green-50 to-blue-50 min-h-screen">
+
   <!-- Navbar -->
-  <nav class="bg-green-600 p-4 text-white text-center text-xl font-bold shadow">
-    Milqly - User Dashboard
+  <nav class="bg-gradient-to-r from-green-600 to-blue-600 p-4 text-white text-center text-2xl font-bold shadow-lg">
+    🌿 Milqly - User Dashboard
   </nav>
 
-  <div class="max-w-4xl mx-auto mt-8 p-6 bg-white shadow rounded-xl">
-    <!-- Profile -->
-    <h2 class="text-2xl font-semibold mb-4 text-gray-700">👤 Profile Details</h2>
-    <div id="profileDetails" class="p-4 border rounded bg-gray-100">Loading...</div>
-
-    <!-- Subscription Selection -->
-    <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-700">📦 Select Subscription</h2>
-    <div class="p-4 border rounded bg-gray-100">
-      <select id="subscriptionPlan" class="p-2 border rounded">
-        <option value="">-- Choose a Plan --</option>
-        <option value="weekly">Weekly Subscription</option>
-        <option value="monthly">Monthly Subscription</option>
-      </select>
-      <button onclick="saveSubscription()" class="ml-4 bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">
-        Save
-      </button>
-      <p id="subscriptionMessage" class="mt-2 text-green-600 font-medium"></p>
+  <div class="max-w-5xl mx-auto mt-10 p-6 space-y-8">
+    <!-- Profile Card -->
+    <div class="bg-white shadow-lg rounded-2xl p-6 border-t-4 border-green-500">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-700 flex items-center gap-2">👤 Profile</h2>
+      <div id="profileBox" class="text-gray-600">Loading...</div>
     </div>
 
-    <!-- Delivery Status -->
-    <h2 class="text-2xl font-semibold mt-8 mb-4 text-gray-700">🚚 Delivery Status</h2>
-    <div id="deliveryStatus" class="p-4 border rounded bg-gray-100">Loading...</div>
+    <!-- Subscription Info Card -->
+    <div class="bg-white shadow-lg rounded-2xl p-6 border-t-4 border-blue-500">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-700 flex items-center gap-2">🍼 My Subscription</h2>
+      <div id="subscriptionBox" class="text-gray-600">No subscription selected yet.</div>
+    </div>
+
+    <!-- Subscription Selection Card -->
+    <div class="bg-white shadow-lg rounded-2xl p-6 border-t-4 border-purple-500">
+      <h3 class="text-xl font-semibold mb-3 text-gray-700">✨ Select a Subscription Plan</h3>
+      <select id="planSelect" class="p-3 border rounded-lg w-full focus:ring-2 focus:ring-green-400">
+        <option value="">-- Choose Plan --</option>
+        <option value="Weekly">Weekly</option>
+        <option value="Monthly">Monthly</option>
+      </select>
+      <button onclick="createSubscription()" 
+        class="mt-4 bg-gradient-to-r from-green-500 to-blue-500 text-white px-5 py-3 rounded-xl shadow hover:opacity-90">
+        ✅ Save Subscription
+      </button>
+    </div>
   </div>
 
   <script>
-    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
       authDomain: "milqly.firebaseapp.com",
@@ -54,65 +58,64 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Load Dashboard
-    auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        const uid = user.uid;
+    let currentUserId = null;
+    let subscriptionId = null;
 
-        // Load Profile
-        const userDoc = await db.collection("users").doc(uid).get();
-        if (userDoc.exists) {
-          const data = userDoc.data();
-          document.getElementById("profileDetails").innerHTML = `
-            <p><strong>Name:</strong> ${data.name || ""}</p>
-            <p><strong>Email:</strong> ${data.email || ""}</p>
-            <p><strong>Phone:</strong> ${data.phone || ""}</p>
-          `;
-        } else {
-          document.getElementById("profileDetails").innerText = "Profile not found.";
-        }
-
-        // Load Subscription
-        db.collection("subscriptions").doc(uid).onSnapshot(doc => {
-          if (doc.exists) {
-            const sub = doc.data();
-            document.getElementById("subscriptionMessage").innerText = "Current Plan: " + sub.plan;
-          }
-        });
-
-        // Load Delivery Status
-        db.collection("subscriptions").doc(uid).onSnapshot(doc => {
-          if (doc.exists) {
-            const sub = doc.data();
-            document.getElementById("deliveryStatus").innerText =
-              sub.deliveryStatus || "Not started yet.";
-          } else {
-            document.getElementById("deliveryStatus").innerText = "No subscription found.";
-          }
-        });
-
-      } else {
-        window.location.href = "user-login.html"; // redirect if not logged in
-      }
-    });
-
-    // Save Subscription
-    function saveSubscription() {
-      const plan = document.getElementById("subscriptionPlan").value;
-      if (!plan) {
-        alert("Please select a subscription plan.");
+    auth.onAuthStateChanged(async user => {
+      if (!user) {
+        window.location.href = "login.html";
         return;
       }
-      const user = auth.currentUser;
-      if (user) {
-        db.collection("subscriptions").doc(user.uid).set({
-          userId: user.uid,
+      currentUserId = user.uid;
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      if (userDoc.exists) {
+        const data = userDoc.data();
+        document.getElementById("profileBox").innerHTML = `
+          <p><strong>Name:</strong> ${data.name || "Not Set"}</p>
+          <p><strong>Email:</strong> ${user.email}</p>
+        `;
+      }
+      loadSubscription();
+    });
+
+    function loadSubscription() {
+      db.collection("subscriptions").where("userId", "==", currentUserId)
+        .limit(1).onSnapshot(snapshot => {
+          if (snapshot.empty) {
+            document.getElementById("subscriptionBox").innerHTML = `<p>No subscription selected yet.</p>`;
+            subscriptionId = null;
+          } else {
+            const doc = snapshot.docs[0];
+            const sub = doc.data();
+            subscriptionId = doc.id;
+            document.getElementById("subscriptionBox").innerHTML = `
+              <p><strong>Plan:</strong> ${sub.plan}</p>
+              <p><strong>Status:</strong> <span class="px-2 py-1 bg-yellow-200 rounded">${sub.deliveryStatus}</span></p>
+              <p><strong>Farmer:</strong> ${sub.farmerId || "Not Assigned"}</p>
+            `;
+          }
+      });
+    }
+
+    function createSubscription() {
+      const plan = document.getElementById("planSelect").value;
+      if (!plan) {
+        alert("Please select a plan.");
+        return;
+      }
+      if (subscriptionId) {
+        db.collection("subscriptions").doc(subscriptionId).update({
           plan: plan,
-          deliveryStatus: "Pending Approval",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-          document.getElementById("subscriptionMessage").innerText = "Subscription saved!";
-        });
+          deliveryStatus: "Pending Assignment",
+          farmerId: null
+        }).then(() => alert("Subscription updated!"));
+      } else {
+        db.collection("subscriptions").add({
+          userId: currentUserId,
+          plan: plan,
+          deliveryStatus: "Pending Assignment",
+          farmerId: null
+        }).then(() => alert("Subscription created!"));
       }
     }
   </script>
