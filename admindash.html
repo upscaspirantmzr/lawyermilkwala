@@ -2,152 +2,173 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100">
-
-  <!-- HEADER -->
-  <div class="bg-indigo-600 text-white p-4 text-center text-2xl font-bold shadow-lg">
-    Admin Dashboard
-  </div>
-
-  <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-
-    <!-- Farmer Applications -->
-    <div class="bg-white shadow-xl rounded-2xl p-4">
-      <h2 class="text-xl font-semibold text-indigo-600 mb-3">Pending Farmer Applications</h2>
-      <div id="farmerApplications" class="space-y-3 text-gray-800"></div>
-    </div>
-
-    <!-- User Subscriptions -->
-    <div class="bg-white shadow-xl rounded-2xl p-4">
-      <h2 class="text-xl font-semibold text-indigo-600 mb-3">User Subscriptions (Unassigned)</h2>
-      <div id="userSubscriptions" class="space-y-3 text-gray-800"></div>
-    </div>
-
-    <!-- Assigned Deliveries -->
-    <div class="bg-white shadow-xl rounded-2xl p-4 md:col-span-2">
-      <h2 class="text-xl font-semibold text-indigo-600 mb-3">Assigned Deliveries</h2>
-      <div id="assignedDeliveries" class="space-y-3 text-gray-800"></div>
-    </div>
-
-  </div>
-
-<script>
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCayl1Hkzf7krOjqlxqWEbBpNZC8m41BBk",
-    authDomain: "milqly.firebaseapp.com",
-    projectId: "milqly",
-    storageBucket: "milqly.firebasestorage.app",
-    messagingSenderId: "509357207390",
-    appId: "1:509357207390:web:47a4c7bc0af3373cd0a9cf",
-    measurementId: "G-Z576VSVC5J"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-
-  // Load Farmer Applications
-  function loadFarmerApplications() {
-    db.collection("farmers").where("approved", "==", false).onSnapshot(snapshot => {
-      let container = document.getElementById("farmerApplications");
-      container.innerHTML = "";
-      if (snapshot.empty) {
-        container.innerHTML = "<p class='text-gray-500'>No pending applications</p>";
-      }
-      snapshot.forEach(doc => {
-        let farmer = doc.data();
-        container.innerHTML += `
-          <div class="p-3 border rounded-lg shadow flex justify-between items-center">
-            <span>${farmer.name} (${farmer.email})</span>
-            <button onclick="approveFarmer('${doc.id}')" class="bg-green-500 text-white px-3 py-1 rounded">Approve</button>
-          </div>`;
-      });
-    });
-  }
-
-  function approveFarmer(id) {
-    db.collection("farmers").doc(id).update({ approved: true });
-  }
-
-  // Load User Subscriptions (Unassigned)
-  function loadUserSubscriptions() {
-    db.collection("subscriptions").where("assignedFarmer", "==", null).onSnapshot(snapshot => {
-      let container = document.getElementById("userSubscriptions");
-      container.innerHTML = "";
-      if (snapshot.empty) {
-        container.innerHTML = "<p class='text-gray-500'>No unassigned subscriptions</p>";
-      }
-      snapshot.forEach(doc => {
-        let sub = doc.data();
-        container.innerHTML += `
-          <div class="p-3 border rounded-lg shadow">
-            <p><b>User:</b> ${sub.userEmail}</p>
-            <p><b>Plan:</b> ${sub.plan}</p>
-            <select id="farmerSelect-${doc.id}" class="border rounded p-1 mt-1">
-              <option value="">Select Farmer</option>
-            </select>
-            <button onclick="assignFarmer('${doc.id}')" class="bg-indigo-500 text-white px-3 py-1 rounded mt-2">Assign</button>
-          </div>`;
-        loadFarmersForSelect(doc.id);
-      });
-    });
-  }
-
-  function loadFarmersForSelect(subscriptionId) {
-    db.collection("farmers").where("approved", "==", true).get().then(snapshot => {
-      let select = document.getElementById(`farmerSelect-${subscriptionId}`);
-      snapshot.forEach(doc => {
-        let farmer = doc.data();
-        select.innerHTML += `<option value="${doc.id}">${farmer.name}</option>`;
-      });
-    });
-  }
-
-  function assignFarmer(subscriptionId) {
-    let select = document.getElementById(`farmerSelect-${subscriptionId}`);
-    let farmerId = select.value;
-    if (!farmerId) {
-      alert("Please select a farmer");
-      return;
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(to right, #f8f9fa, #eef2f3);
     }
-    db.collection("subscriptions").doc(subscriptionId).update({
-      assignedFarmer: farmerId,
-      deliveryStatus: "Pending"
-    });
-  }
+    header {
+      background: linear-gradient(to right, #4e54c8, #8f94fb);
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    .blue { border-top: 6px solid #4e54c8; }
+    .green { border-top: 6px solid #28a745; }
+    .orange { border-top: 6px solid #fd7e14; }
+    button {
+      background: #4e54c8;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    button:hover {
+      background: #3b42a1;
+    }
+    select {
+      padding: 5px;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>Admin Dashboard</header>
+  <div class="container">
+    <div class="card blue">
+      <h3>Pending Farmer Applications</h3>
+      <ul id="pendingFarmers"></ul>
+    </div>
 
-  // Load Assigned Deliveries
-  function loadAssignedDeliveries() {
-    db.collection("subscriptions").where("assignedFarmer", "!=", null).onSnapshot(snapshot => {
-      let container = document.getElementById("assignedDeliveries");
-      container.innerHTML = "";
-      if (snapshot.empty) {
-        container.innerHTML = "<p class='text-gray-500'>No assigned deliveries</p>";
+    <div class="card green">
+      <h3>User Subscriptions (Unassigned)</h3>
+      <ul id="unassignedSubs"></ul>
+    </div>
+
+    <div class="card orange" style="grid-column: span 2;">
+      <h3>Assigned Deliveries</h3>
+      <ul id="assignedDeliveries"></ul>
+    </div>
+  </div>
+
+  <script>
+    // ✅ Your Firebase Config here
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Load Pending Farmers
+    function loadPendingFarmers() {
+      db.collection("farmers").where("status", "==", "pending")
+        .onSnapshot(snapshot => {
+          let list = document.getElementById("pendingFarmers");
+          list.innerHTML = "";
+          snapshot.forEach(doc => {
+            let farmer = doc.data();
+            let li = document.createElement("li");
+            li.innerHTML = `
+              ${farmer.name} (${farmer.email})
+              <button onclick="approveFarmer('${doc.id}')">Approve</button>
+            `;
+            list.appendChild(li);
+          });
+        });
+    }
+
+    function approveFarmer(farmerId) {
+      db.collection("farmers").doc(farmerId).update({ status: "approved" });
+    }
+
+    // Load Unassigned User Subscriptions
+    function loadUnassignedSubs() {
+      db.collection("subscriptions").where("assignedTo", "==", null)
+        .onSnapshot(async snapshot => {
+          let list = document.getElementById("unassignedSubs");
+          list.innerHTML = "";
+
+          // Fetch approved farmers for dropdown
+          let farmersSnap = await db.collection("farmers").where("status", "==", "approved").get();
+          let farmerOptions = "";
+          farmersSnap.forEach(f => {
+            farmerOptions += `<option value="${f.id}">${f.data().name}</option>`;
+          });
+
+          snapshot.forEach(doc => {
+            let sub = doc.data();
+            let li = document.createElement("li");
+            li.innerHTML = `
+              ${sub.userEmail} → ${sub.plan}
+              <select id="farmerSelect-${doc.id}">
+                <option value="">Assign Farmer</option>
+                ${farmerOptions}
+              </select>
+              <button onclick="assignFarmer('${doc.id}')">Assign</button>
+            `;
+            list.appendChild(li);
+          });
+        });
+    }
+
+    function assignFarmer(subId) {
+      let select = document.getElementById(`farmerSelect-${subId}`);
+      let farmerId = select.value;
+      if (farmerId) {
+        db.collection("subscriptions").doc(subId).update({ assignedTo: farmerId, status: "assigned" });
       }
-      snapshot.forEach(doc => {
-        let sub = doc.data();
-        container.innerHTML += `
-          <div class="p-3 border rounded-lg shadow">
-            <p><b>User:</b> ${sub.userEmail}</p>
-            <p><b>Plan:</b> ${sub.plan}</p>
-            <p><b>Farmer ID:</b> ${sub.assignedFarmer}</p>
-            <p><b>Status:</b> ${sub.deliveryStatus}</p>
-          </div>`;
-      });
-    });
-  }
+    }
 
-  // Init
-  loadFarmerApplications();
-  loadUserSubscriptions();
-  loadAssignedDeliveries();
-</script>
+    // Load Assigned Deliveries
+    function loadAssignedDeliveries() {
+      db.collection("subscriptions").where("status", "==", "assigned")
+        .onSnapshot(snapshot => {
+          let list = document.getElementById("assignedDeliveries");
+          list.innerHTML = "";
+          snapshot.forEach(doc => {
+            let sub = doc.data();
+            let li = document.createElement("li");
+            li.textContent = `${sub.userEmail} → ${sub.plan} (Assigned to Farmer: ${sub.assignedTo})`;
+            list.appendChild(li);
+          });
+        });
+    }
+
+    // Run loaders
+    loadPendingFarmers();
+    loadUnassignedSubs();
+    loadAssignedDeliveries();
+  </script>
 </body>
 </html>
