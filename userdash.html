@@ -2,49 +2,56 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; background:#f9f9f9; margin:0; padding:0; }
+    header { background:#4CAF50; color:white; padding:15px; text-align:center; }
+    section { margin:20px; padding:20px; background:white; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+    h2 { margin-top:0; }
+    button { padding:10px 20px; border:none; border-radius:6px; background:#f44336; color:white; cursor:pointer; }
+    button:hover { background:#d32f2f; }
+    .label { font-weight:bold; }
+  </style>
 </head>
-<body class="bg-light">
-  <div class="container mt-4">
-    <div class="card shadow-lg">
-      <div class="card-header bg-primary text-white d-flex justify-content-between">
-        <h5 class="mb-0">User Dashboard</h5>
-        <button id="logoutBtn" class="btn btn-light btn-sm">Logout</button>
-      </div>
-      <div class="card-body">
+<body>
+  <header>
+    <h2 id="welcome">Loading...</h2>
+  </header>
 
-        <!-- Profile -->
-        <h6>👤 Profile</h6>
-        <p><b>Name:</b> <span id="userName">Loading...</span></p>
-        <p><b>Email:</b> <span id="userEmail">Loading...</span></p>
-        <p><b>Phone:</b> <span id="userPhone">Loading...</span></p>
-        <hr>
+  <section>
+    <h3>Profile</h3>
+    <p><span class="label">Name:</span> <span id="name">Loading...</span></p>
+    <p><span class="label">Email:</span> <span id="email">Loading...</span></p>
+    <p><span class="label">Address:</span> <span id="address">Loading...</span></p>
+  </section>
 
-        <!-- Subscription -->
-        <h6>📦 Subscription</h6>
-        <p id="userSubscription">Loading...</p>
-        <hr>
+  <section>
+    <h3>Subscription</h3>
+    <p><span class="label">Plan:</span> <span id="plan">Loading...</span></p>
+    <p><span class="label">Start:</span> <span id="start">Loading...</span></p>
+    <p><span class="label">End:</span> <span id="end">Loading...</span></p>
+    <p><span class="label">Status:</span> <span id="status">Loading...</span></p>
+  </section>
 
-        <!-- Orders -->
-        <h6>🛒 Orders</h6>
-        <ul id="userOrders" class="list-group">
-          <li class="list-group-item">Loading...</li>
-        </ul>
-      </div>
-    </div>
-  </div>
+  <section>
+    <h3>Delivery Status</h3>
+    <p><span class="label">Today:</span> <span id="delivery-status">Loading...</span></p>
+  </section>
 
-  <!-- ✅ Firebase v8 scripts -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <section>
+    <button onclick="logout()">Logout</button>
+  </section>
+
+  <!-- ✅ Firebase Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <script>
-    // ✅ Your config
+    // 🔥 Your Firebase Config
     const firebaseConfig = {
-      apiKey: "YOUR-KEY",
+      apiKey: "YOUR-API-KEY",
       authDomain: "YOUR-PROJECT.firebaseapp.com",
       projectId: "YOUR-PROJECT",
       storageBucket: "YOUR-PROJECT.appspot.com",
@@ -52,85 +59,58 @@
       appId: "APP-ID"
     };
 
+    // ✅ Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    const userName = document.getElementById("userName");
-    const userEmail = document.getElementById("userEmail");
-    const userPhone = document.getElementById("userPhone");
-    const userSubscription = document.getElementById("userSubscription");
-    const userOrders = document.getElementById("userOrders");
-
+    // ✅ Auth state listener
     auth.onAuthStateChanged(async (user) => {
       if (!user) {
-        window.location.href = "userLogin.html";
+        window.location.href = "login.html"; // redirect if not logged in
         return;
       }
 
+      document.getElementById("welcome").textContent = `Welcome, ${user.displayName || "User"} 👋`;
+
       try {
-        // --- Profile ---
+        // 🔹 Profile
         const userDoc = await db.collection("users").doc(user.uid).get();
         if (userDoc.exists) {
           const data = userDoc.data();
-          userName.textContent = data.name || "User";
-          userEmail.textContent = data.email || user.email;
-          userPhone.textContent = data.phone || "Not set";
-        } else {
-          userName.textContent = "New User";
-          userEmail.textContent = user.email;
-          userPhone.textContent = "Not set";
+          document.getElementById("name").textContent = data.name || "N/A";
+          document.getElementById("email").textContent = user.email;
+          document.getElementById("address").textContent = data.address || "N/A";
         }
 
-        // --- Subscription ---
-        db.collection("subscriptions").where("userId", "==", user.uid).get()
-          .then(snapshot => {
-            if (!snapshot.empty) {
-              let subs = [];
-              snapshot.forEach(doc => {
-                const d = doc.data();
-                subs.push(d.plan + " (" + (d.status || "Active") + ")");
-              });
-              userSubscription.textContent = subs.join(", ");
-            } else {
-              userSubscription.textContent = "No subscription found";
-            }
-          })
-          .catch(err => {
-            console.error("Subscription error:", err);
-            userSubscription.textContent = "Error loading subscription";
-          });
+        // 🔹 Subscription
+        const subDoc = await db.collection("subscriptions").doc(user.uid).get();
+        if (subDoc.exists) {
+          const sub = subDoc.data();
+          document.getElementById("plan").textContent = sub.plan || "N/A";
+          document.getElementById("start").textContent = sub.startDate || "N/A";
+          document.getElementById("end").textContent = sub.endDate || "N/A";
+          document.getElementById("status").textContent = sub.status || "N/A";
+        }
 
-        // --- Orders ---
-        db.collection("orders").where("userId", "==", user.uid).get()
-          .then(snapshot => {
-            userOrders.innerHTML = "";
-            if (!snapshot.empty) {
-              snapshot.forEach(doc => {
-                const d = doc.data();
-                let li = document.createElement("li");
-                li.className = "list-group-item";
-                li.textContent = `${d.item || "Item"} - ${d.status || "Pending"}`;
-                userOrders.appendChild(li);
-              });
-            } else {
-              userOrders.innerHTML = "<li class='list-group-item'>No orders found</li>";
-            }
-          })
-          .catch(err => {
-            console.error("Orders error:", err);
-            userOrders.innerHTML = "<li class='list-group-item'>Error loading orders</li>";
-          });
+        // 🔹 Deliveries
+        const delDoc = await db.collection("deliveries").doc(user.uid).get();
+        if (delDoc.exists) {
+          const del = delDoc.data();
+          document.getElementById("delivery-status").textContent = del.today || "Pending";
+        }
 
       } catch (err) {
-        console.error("Profile error:", err);
-        userName.textContent = "Error loading profile";
+        console.error("Error loading dashboard:", err);
       }
     });
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      auth.signOut().then(() => window.location.href = "userLogin.html");
-    });
+    // ✅ Logout
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    }
   </script>
 </body>
 </html>
