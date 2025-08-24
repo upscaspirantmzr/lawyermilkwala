@@ -98,7 +98,7 @@ const firebaseConfig = {
     auth.onAuthStateChanged(user => {
       if (user) {
         // 🚨 check if this is admin
-        if (user.uid !== "ADMIN_UID_HERE") {
+        if (user.uid !== "LO8PDh2g8MbvwY19X5QmlYTQo2G3") {
           alert("Access denied. Only Admin allowed.");
           auth.signOut();
           return;
